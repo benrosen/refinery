@@ -1,4 +1,4 @@
-import { createEngine } from "./functions";
+import { createEngine } from "./index";
 
 const useEngine = createEngine();
 
