@@ -1,0 +1,18 @@
+{
+	"name": "refinery",
+	"description": "A place to develop toys into games.",
+	"version": "1.0.0",
+	"scripts": {
+		"prestart": "cd client && npm run build",
+		"start": "cd server && npm run start",
+		"test": "npm run test:shared && npm run test:client && npm run test:server",
+		"test:server": "cd server && npm run test",
+		"test:shared": "cd shared && npm run test",
+		"test:client": "cd client && npm run test"
+	},
+	"devDependencies": {
+		"camelcase": "^7.0.1",
+		"cannon-es": "^0.20.0",
+		"prettier": "^3.0.0"
+	}
+}

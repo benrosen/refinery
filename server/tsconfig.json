@@ -1,0 +1,11 @@
+{
+	"compilerOptions": {
+		"target": "ES2015",
+		"esModuleInterop": true,
+		"resolveJsonModule": true,
+		"moduleResolution": "nodenext"
+	},
+	"exclude": [
+		"node_modules"
+	]
+}
