@@ -295,7 +295,11 @@ const useFrames = ({
 };
 
 const createScene = () => {
-  return new THREE.Scene();
+  const scene = new THREE.Scene();
+
+  scene.background = new THREE.Color(0x000000);
+
+  return scene;
 };
 
 const createCamera = () => {
@@ -303,7 +307,9 @@ const createCamera = () => {
 };
 
 const createRenderer = () => {
-  return new THREE.WebGLRenderer();
+  return new THREE.WebGLRenderer({
+    canvas: document.getElementById("game") as HTMLCanvasElement,
+  });
 };
 
 const createPhysics = () => {
