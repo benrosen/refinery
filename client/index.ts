@@ -6,7 +6,9 @@ type JsonValueOrUndefined = JsonValue | undefined;
 
 const STORAGE: { [key: string]: JsonValueOrUndefined } = {};
 
-const EVENTS: EventTarget = new EventTarget();
+const EVENTS: EventTarget = window;
+
+const CANVAS = document.getElementById("game") as HTMLCanvasElement;
 
 const get = async <T extends JsonValueOrUndefined>({
   key,
@@ -303,17 +305,138 @@ const createScene = () => {
 };
 
 const createCamera = () => {
-  return new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+  const camera = new THREE.PerspectiveCamera(
+    75,
+    CANVAS.clientWidth / CANVAS.clientHeight,
+    0.1,
+    1000,
+  );
+
+  on({
+    topic: "resize",
+    callback: async () => {
+      // TODO resize camera, etc.
+      console.log("hi - camera");
+    },
+  });
+
+  return camera;
 };
 
 const createRenderer = () => {
-  return new THREE.WebGLRenderer({
-    canvas: document.getElementById("game") as HTMLCanvasElement,
+  const renderer = new THREE.WebGLRenderer({
+    canvas: CANVAS,
+    antialias: true,
   });
+
+  renderer.pixelRatio = window.devicePixelRatio;
+
+  // BUG when this is enabled, the canvas is not resized
+  // renderer.setSize(window.innerWidth, window.innerHeight);
+
+  return renderer;
 };
 
 const createPhysics = () => {
   return new CANNON.World();
+};
+
+const createGamepadAPIPollerPublisher = () => {
+  let gamepads: Gamepad[] = [];
+
+  const emitGamepadConnectedEvent = useEmit<Gamepad["id"]>({
+    topic: "GamepadConnected",
+  });
+
+  const emitGamepadDisconnectedEvent = useEmit<Gamepad["id"]>({
+    topic: "GamepadDisconnected",
+  });
+
+  on<{ gamepad: Pick<Gamepad, "id"> }>({
+    topic: "gamepadconnected",
+    callback: async (event) => {
+      await emitGamepadConnectedEvent(event.gamepad.id);
+    },
+  });
+
+  on<{ gamepad: Pick<Gamepad, "id"> }>({
+    topic: "gamepaddisconnected",
+    callback: async (event) => {
+      await emitGamepadDisconnectedEvent(event.gamepad.id);
+    },
+  });
+
+  const emitGamepadButtonDownEvent = useEmit<{
+    gamepadId: Gamepad["id"];
+    buttonIndex: number;
+  }>({
+    topic: "GamepadButtonDown",
+  });
+
+  const emitGamepadButtonUpEvent = useEmit<{
+    gamepadId: Gamepad["id"];
+    buttonIndex: number;
+  }>({
+    topic: "GamepadButtonUp",
+  });
+
+  const emitGamepadAxisValueChangedEvent = useEmit<{
+    gamepadId: Gamepad["id"];
+    axisIndex: number;
+    value: number;
+  }>({
+    topic: "GamepadAxisValueChanged",
+  });
+
+  const pollGamepadsAndPublishEvents = () => {
+    const nextGamepads = navigator.getGamepads();
+
+    gamepads.forEach(async (gamepad, index) => {
+      const nextGamepad = nextGamepads[index];
+
+      if (!nextGamepad) {
+        return;
+      }
+
+      if (nextGamepad.buttons.length !== gamepad.buttons.length) {
+        throw new Error("TODO");
+      }
+
+      nextGamepad.buttons.forEach((button, buttonIndex) => {
+        if (button.pressed && !gamepad.buttons[buttonIndex].pressed) {
+          emitGamepadButtonDownEvent({
+            gamepadId: gamepad.id,
+            buttonIndex,
+          });
+        } else if (!button.pressed && gamepad.buttons[buttonIndex].pressed) {
+          emitGamepadButtonUpEvent({
+            gamepadId: gamepad.id,
+            buttonIndex,
+          });
+        }
+      });
+
+      if (nextGamepad.axes.length !== gamepad.axes.length) {
+        throw new Error("TODO");
+      }
+
+      nextGamepad.axes.forEach((axis, axisIndex) => {
+        if (axis !== gamepad.axes[axisIndex]) {
+          emitGamepadAxisValueChangedEvent({
+            gamepadId: gamepad.id,
+            axisIndex,
+            value: axis,
+          });
+        }
+      });
+    });
+
+    gamepads = nextGamepads;
+  };
+
+  return {
+    pollGamepadsAndPublishEvents,
+  };
 };
 
 export const createEngine = () => {
@@ -325,16 +448,24 @@ export const createEngine = () => {
 
   const scene = createScene();
 
+  const { pollGamepadsAndPublishEvents } = createGamepadAPIPollerPublisher();
+
   const useFrame = useFrames({
     onBeforeUpdate: async (frame) => {
-      physics.step(1 / 60, frame.millisecondsSinceLastFrame / 1000);
+      pollGamepadsAndPublishEvents();
+
+      physics.fixedStep(1 / 60, frame.millisecondsSinceLastFrame / 1000);
     },
     onAfterUpdate: async (frame) => {
+      camera.aspect = CANVAS.clientWidth / CANVAS.clientHeight;
+
+      camera.updateProjectionMatrix();
+
       renderer.render(scene, camera);
     },
   });
 
-  return (
+  const useUpdate = (
     callback: ({
       scene,
       camera,
@@ -349,7 +480,7 @@ export const createEngine = () => {
       frame: Frame;
     }) => Promise<void>,
   ) => {
-    useFrame(async (frame) => {
+    return useFrame(async (frame) => {
       await callback({
         scene,
         camera,
@@ -358,5 +489,64 @@ export const createEngine = () => {
         frame,
       });
     });
+  };
+
+  const useCamera = (callback: (camera: THREE.Camera) => void) => {
+    return callback(camera);
+  };
+
+  const useRenderer = (callback: (renderer: THREE.Renderer) => void) => {
+    return callback(renderer);
+  };
+
+  const usePhysics = (callback: (physics: CANNON.World) => void) => {
+    return callback(physics);
+  };
+
+  const useScene = (callback: (scene: THREE.Scene) => void) => {
+    return callback(scene);
+  };
+
+  const useGamepadConnected = useOn<{ gamepadId: Gamepad["id"] }>({
+    topic: "GamepadConnected",
+  });
+
+  const useGamepadDisconnected = useOn<{ gamepadId: Gamepad["id"] }>({
+    topic: "GamepadDisconnected",
+  });
+
+  const useGamepadButtonDown = useOn<{
+    gamepadId: Gamepad["id"];
+    buttonIndex: number;
+  }>({
+    topic: "GamepadButtonDown",
+  });
+
+  const useGamepadButtonUp = useOn<{
+    gamepadId: Gamepad["id"];
+    buttonIndex: number;
+  }>({
+    topic: "GamepadButtonUp",
+  });
+
+  const useGamepadAxisValueChanged = useOn<{
+    gamepadId: Gamepad["id"];
+    axisIndex: number;
+    value: number;
+  }>({
+    topic: "GamepadAxisValueChanged",
+  });
+
+  return {
+    useGamepadConnected,
+    useGamepadDisconnected,
+    useGamepadButtonDown,
+    useGamepadButtonUp,
+    useGamepadAxisValueChanged,
+    useCamera,
+    usePhysics,
+    useRenderer,
+    useScene,
+    useUpdate,
   };
 };
