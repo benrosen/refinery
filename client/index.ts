@@ -352,19 +352,20 @@ const createGamepadAPIPollerPublisher = () => {
     topic: "GamepadDisconnected",
   });
 
-  on<{ gamepad: Pick<Gamepad, "id"> }>({
-    topic: "gamepadconnected",
-    callback: async (event) => {
-      await emitGamepadConnectedEvent(event.gamepad.id);
-    },
+  window.addEventListener("gamepadconnected", async (event: GamepadEvent) => {
+    console.log("gamepad connected", event);
+
+    await emitGamepadConnectedEvent(event.gamepad.id);
   });
 
-  on<{ gamepad: Pick<Gamepad, "id"> }>({
-    topic: "gamepaddisconnected",
-    callback: async (event) => {
+  window.addEventListener(
+    "gamepaddisconnected",
+    async (event: GamepadEvent) => {
+      console.log("gamepad disconnected", event);
+
       await emitGamepadDisconnectedEvent(event.gamepad.id);
     },
-  });
+  );
 
   const emitGamepadButtonDownEvent = useEmit<{
     gamepadId: Gamepad["id"];
@@ -392,14 +393,14 @@ const createGamepadAPIPollerPublisher = () => {
     const nextGamepads = navigator.getGamepads();
 
     gamepads.forEach(async (gamepad, index) => {
+      if (gamepad === null) {
+        return;
+      }
+
       const nextGamepad = nextGamepads[index];
 
       if (!nextGamepad) {
         return;
-      }
-
-      if (nextGamepad.buttons.length !== gamepad.buttons.length) {
-        throw new Error("TODO");
       }
 
       nextGamepad.buttons.forEach((button, buttonIndex) => {
@@ -415,10 +416,6 @@ const createGamepadAPIPollerPublisher = () => {
           });
         }
       });
-
-      if (nextGamepad.axes.length !== gamepad.axes.length) {
-        throw new Error("TODO");
-      }
 
       nextGamepad.axes.forEach((axis, axisIndex) => {
         if (axis !== gamepad.axes[axisIndex]) {
