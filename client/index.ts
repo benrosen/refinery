@@ -4,7 +4,9 @@ import { JsonValue } from "../shared";
 
 type JsonValueOrUndefined = JsonValue | undefined;
 
-const STORAGE: { [key: string]: JsonValueOrUndefined } = {};
+const STORAGE: {
+  [key: string]: JsonValueOrUndefined;
+} = {};
 
 const EVENTS: EventTarget = window;
 
@@ -296,6 +298,16 @@ const useFrames = ({
   };
 };
 
+const createLogger = ({
+  createLogEntry,
+}: {
+  createLogEntry: (entry: JsonValue) => void;
+}) => {
+  return <T extends JsonValue>(entry: T) => {
+    createLogEntry(entry);
+  };
+};
+
 const createScene = () => {
   const scene = new THREE.Scene();
 
@@ -316,7 +328,6 @@ const createCamera = () => {
     topic: "resize",
     callback: async () => {
       // TODO resize camera, etc.
-      console.log("hi - camera");
     },
   });
 
@@ -344,45 +355,41 @@ const createPhysics = () => {
 const createGamepadAPIPollerPublisher = () => {
   let gamepads: Gamepad[] = [];
 
-  const emitGamepadConnectedEvent = useEmit<Gamepad["id"]>({
+  const emitGamepadConnectedEvent = useEmit<Gamepad["index"]>({
     topic: "GamepadConnected",
   });
 
-  const emitGamepadDisconnectedEvent = useEmit<Gamepad["id"]>({
+  const emitGamepadDisconnectedEvent = useEmit<Gamepad["index"]>({
     topic: "GamepadDisconnected",
   });
 
   window.addEventListener("gamepadconnected", async (event: GamepadEvent) => {
-    console.log("gamepad connected", event);
-
-    await emitGamepadConnectedEvent(event.gamepad.id);
+    await emitGamepadConnectedEvent(event.gamepad.index);
   });
 
   window.addEventListener(
     "gamepaddisconnected",
     async (event: GamepadEvent) => {
-      console.log("gamepad disconnected", event);
-
-      await emitGamepadDisconnectedEvent(event.gamepad.id);
+      await emitGamepadDisconnectedEvent(event.gamepad.index);
     },
   );
 
   const emitGamepadButtonDownEvent = useEmit<{
-    gamepadId: Gamepad["id"];
+    gamepadIndex: Gamepad["index"];
     buttonIndex: number;
   }>({
     topic: "GamepadButtonDown",
   });
 
   const emitGamepadButtonUpEvent = useEmit<{
-    gamepadId: Gamepad["id"];
+    gamepadIndex: Gamepad["index"];
     buttonIndex: number;
   }>({
     topic: "GamepadButtonUp",
   });
 
   const emitGamepadAxisValueChangedEvent = useEmit<{
-    gamepadId: Gamepad["id"];
+    gamepadIndex: Gamepad["index"];
     axisIndex: number;
     value: number;
   }>({
@@ -406,12 +413,12 @@ const createGamepadAPIPollerPublisher = () => {
       nextGamepad.buttons.forEach((button, buttonIndex) => {
         if (button.pressed && !gamepad.buttons[buttonIndex].pressed) {
           emitGamepadButtonDownEvent({
-            gamepadId: gamepad.id,
+            gamepadIndex: gamepad.index,
             buttonIndex,
           });
         } else if (!button.pressed && gamepad.buttons[buttonIndex].pressed) {
           emitGamepadButtonUpEvent({
-            gamepadId: gamepad.id,
+            gamepadIndex: gamepad.index,
             buttonIndex,
           });
         }
@@ -420,7 +427,7 @@ const createGamepadAPIPollerPublisher = () => {
       nextGamepad.axes.forEach((axis, axisIndex) => {
         if (axis !== gamepad.axes[axisIndex]) {
           emitGamepadAxisValueChangedEvent({
-            gamepadId: gamepad.id,
+            gamepadIndex: gamepad.index,
             axisIndex,
             value: axis,
           });
@@ -444,6 +451,21 @@ export const createEngine = () => {
   const camera = createCamera();
 
   const scene = createScene();
+
+  const log = createLogger({
+    createLogEntry: (entry: JsonValue) => {
+      if (
+        typeof entry === "object" &&
+        !Array.isArray(entry) &&
+        entry !== null &&
+        entry.level === "error"
+      ) {
+        console.error(JSON.stringify(entry, null, 2));
+      } else {
+        console.log(JSON.stringify(entry, null, 2));
+      }
+    },
+  });
 
   const { pollGamepadsAndPublishEvents } = createGamepadAPIPollerPublisher();
 
@@ -504,30 +526,34 @@ export const createEngine = () => {
     return callback(scene);
   };
 
-  const useGamepadConnected = useOn<{ gamepadId: Gamepad["id"] }>({
+  const useGamepadConnected = useOn<{
+    gamepadIndex: Gamepad["index"];
+  }>({
     topic: "GamepadConnected",
   });
 
-  const useGamepadDisconnected = useOn<{ gamepadId: Gamepad["id"] }>({
+  const useGamepadDisconnected = useOn<{
+    gamepadIndex: Gamepad["index"];
+  }>({
     topic: "GamepadDisconnected",
   });
 
   const useGamepadButtonDown = useOn<{
-    gamepadId: Gamepad["id"];
+    gamepadIndex: Gamepad["index"];
     buttonIndex: number;
   }>({
     topic: "GamepadButtonDown",
   });
 
   const useGamepadButtonUp = useOn<{
-    gamepadId: Gamepad["id"];
+    gamepadIndex: Gamepad["index"];
     buttonIndex: number;
   }>({
     topic: "GamepadButtonUp",
   });
 
   const useGamepadAxisValueChanged = useOn<{
-    gamepadId: Gamepad["id"];
+    gamepadIndex: Gamepad["index"];
     axisIndex: number;
     value: number;
   }>({
@@ -535,6 +561,7 @@ export const createEngine = () => {
   });
 
   return {
+    log,
     useGamepadConnected,
     useGamepadDisconnected,
     useGamepadButtonDown,
