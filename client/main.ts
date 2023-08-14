@@ -1,21 +1,13 @@
 import { createEngine } from "./index";
 
-const { log, useGamepadButtonUp, useGamepadButtonDown } = createEngine();
+const { input, debug, time } = createEngine();
 
-useGamepadButtonDown(async (event) => {
-  log({
-    message: "Gamepad button down",
-    data: event,
-  });
+const { log } = debug;
+
+input.gamepads.primary.squareButton.onChanged(async (isPressed) => {
+  log(`Square button ${isPressed ? "pressed" : "released"}`);
 });
 
-useGamepadButtonUp(async (event) => {
-  log({
-    message: "Gamepad button up",
-    data: event,
-  });
+time.useUpdate(async ({ frame }) => {
+  log(frame);
 });
-
-// integrate tonejs with createAudioClient
-// what if timing was entirely driven by the audio clock?
-// use it to create hooks like useAudio, useQuarterNote, useHalfNote, useSynthesizer, useSample, useDistortion, useReverb,

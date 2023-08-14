@@ -467,6 +467,13 @@ export const createEngine = () => {
     },
   });
 
+  const error = (error: Error | JsonValue) => {
+    log({
+      level: "error",
+      error: error instanceof Error ? error.message : error,
+    });
+  };
+
   const { pollGamepadsAndPublishEvents } = createGamepadAPIPollerPublisher();
 
   const useFrame = useFrames({
@@ -510,22 +517,6 @@ export const createEngine = () => {
     });
   };
 
-  const useCamera = (callback: (camera: THREE.Camera) => void) => {
-    return callback(camera);
-  };
-
-  const useRenderer = (callback: (renderer: THREE.Renderer) => void) => {
-    return callback(renderer);
-  };
-
-  const usePhysics = (callback: (physics: CANNON.World) => void) => {
-    return callback(physics);
-  };
-
-  const useScene = (callback: (scene: THREE.Scene) => void) => {
-    return callback(scene);
-  };
-
   const useGamepadConnected = useOn<{
     gamepadIndex: Gamepad["index"];
   }>({
@@ -537,6 +528,90 @@ export const createEngine = () => {
   }>({
     topic: "GamepadDisconnected",
   });
+
+  const useGamepadSquareButton = ({
+    gamepadIndex,
+  }: {
+    gamepadIndex: Gamepad["index"];
+  }) => {
+    return useGamepadButton({
+      buttonIndex: 2,
+      gamepadIndex,
+    });
+  };
+
+  const useGamepadCrossButton = ({
+    gamepadIndex,
+  }: {
+    gamepadIndex: Gamepad["index"];
+  }) => {
+    return useGamepadButton({
+      buttonIndex: 0,
+      gamepadIndex,
+    });
+  };
+
+  const useGamepadCircleButton = ({
+    gamepadIndex,
+  }: {
+    gamepadIndex: Gamepad["index"];
+  }) => {
+    return useGamepadButton({
+      buttonIndex: 1,
+      gamepadIndex,
+    });
+  };
+
+  const useGamepadTriangleButton = ({
+    gamepadIndex,
+  }: {
+    gamepadIndex: Gamepad["index"];
+  }) => {
+    return useGamepadButton({
+      buttonIndex: 3,
+      gamepadIndex,
+    });
+  };
+
+  const useGamepadButton = ({
+    buttonIndex,
+    gamepadIndex,
+  }: {
+    buttonIndex: number;
+    gamepadIndex: Gamepad["index"];
+  }) => {
+    const { get, onChanged, set } = useToggle({
+      key: `GamepadButton:${gamepadIndex}:${buttonIndex}}`,
+      initialValue: false,
+    });
+
+    useGamepadButtonDown(async (event) => {
+      if (
+        buttonIndex !== event.buttonIndex ||
+        gamepadIndex !== event.gamepadIndex
+      ) {
+        return;
+      }
+
+      await set(true);
+    });
+
+    useGamepadButtonUp(async (event) => {
+      if (
+        buttonIndex !== event.buttonIndex ||
+        gamepadIndex !== event.gamepadIndex
+      ) {
+        return;
+      }
+
+      await set(false);
+    });
+
+    return {
+      get,
+      onChanged,
+    };
+  };
 
   const useGamepadButtonDown = useOn<{
     gamepadIndex: Gamepad["index"];
@@ -560,17 +635,210 @@ export const createEngine = () => {
     topic: "GamepadAxisValueChanged",
   });
 
-  return {
-    log,
-    useGamepadConnected,
-    useGamepadDisconnected,
-    useGamepadButtonDown,
-    useGamepadButtonUp,
-    useGamepadAxisValueChanged,
-    useCamera,
-    usePhysics,
-    useRenderer,
-    useScene,
+  const useGamepadAxis = ({
+    axisIndex,
+    gamepadIndex,
+  }: {
+    axisIndex: number;
+    gamepadIndex: Gamepad["index"];
+  }) => {
+    const { get, set, onChanged } = useState<number>({
+      key: `GamepadAxis:${gamepadIndex}:${axisIndex}`,
+      initialValue: 0,
+    });
+
+    useGamepadAxisValueChanged(async (event) => {
+      if (
+        axisIndex !== event.axisIndex ||
+        gamepadIndex !== event.gamepadIndex
+      ) {
+        return;
+      }
+
+      await set(event.value);
+    });
+
+    return {
+      get,
+      onChanged,
+    };
+  };
+
+  const useGamepadStick = ({
+    buttonIndex,
+    gamepadIndex,
+    horizontalAxisIndex,
+    verticalAxisIndex,
+  }: {
+    buttonIndex: number;
+    gamepadIndex: Gamepad["index"];
+    horizontalAxisIndex: number;
+    verticalAxisIndex: number;
+  }) => {
+    const {
+      get: getHorizontalAxisValue,
+      onChanged: onHorizontalAxisValueChanged,
+    } = useGamepadAxis({
+      axisIndex: horizontalAxisIndex,
+      gamepadIndex,
+    });
+
+    const { get: getVerticalAxisValue, onChanged: onVerticalAxisValueChanged } =
+      useGamepadAxis({
+        axisIndex: verticalAxisIndex,
+        gamepadIndex,
+      });
+
+    const { get: getButtonValue, onChanged: onButtonValueChanged } =
+      useGamepadButton({
+        buttonIndex,
+        gamepadIndex,
+      });
+
+    return {
+      getHorizontalAxisValue,
+      onHorizontalAxisValueChanged,
+      getVerticalAxisValue,
+      onVerticalAxisValueChanged,
+      getButtonValue,
+      onButtonValueChanged,
+    };
+  };
+
+  const useGamepadLeftStick = ({
+    gamepadIndex,
+  }: {
+    gamepadIndex: Gamepad["index"];
+  }) => {
+    return useGamepadStick({
+      buttonIndex: 14,
+      gamepadIndex,
+      horizontalAxisIndex: 0,
+      verticalAxisIndex: 1,
+    });
+  };
+
+  const useGamepadRightStick = ({
+    gamepadIndex,
+  }: {
+    gamepadIndex: Gamepad["index"];
+  }) => {
+    return useGamepadStick({
+      buttonIndex: 15,
+      gamepadIndex,
+      horizontalAxisIndex: 2,
+      verticalAxisIndex: 3,
+    });
+  };
+
+  const useGamepad = ({ gamepadIndex }: { gamepadIndex: Gamepad["index"] }) => {
+    const {
+      get: getIsConnected,
+      set: setIsConnected,
+      onChanged: onIsConnectedChanged,
+    } = useToggle({
+      key: `Gamepad:${gamepadIndex}`,
+      initialValue: false,
+    });
+
+    useGamepadConnected(async (event) => {
+      if (gamepadIndex !== event.gamepadIndex) {
+        return;
+      }
+
+      await setIsConnected(true);
+    });
+
+    useGamepadDisconnected(async (event) => {
+      if (gamepadIndex !== event.gamepadIndex) {
+        return;
+      }
+
+      await setIsConnected(false);
+    });
+
+    return {
+      getIsConnected,
+      onIsConnectedChanged,
+      leftStick: useGamepadLeftStick({
+        gamepadIndex,
+      }),
+      rightStick: useGamepadRightStick({
+        gamepadIndex,
+      }),
+      circleButton: useGamepadCircleButton({
+        gamepadIndex,
+      }),
+      crossButton: useGamepadCrossButton({
+        gamepadIndex,
+      }),
+      squareButton: useGamepadSquareButton({
+        gamepadIndex,
+      }),
+      triangleButton: useGamepadTriangleButton({
+        gamepadIndex,
+      }),
+    };
+  };
+
+  const input = {
+    gamepads: {
+      primary: useGamepad({ gamepadIndex: 0 }),
+      secondary: useGamepad({ gamepadIndex: 1 }),
+    },
+  };
+
+  const time = {
+    // tempo:
     useUpdate,
+    // useWholeNotes,
+  };
+
+  // how should "transitions" work?
+
+  const graphics = {
+    camera,
+    renderer,
+    scene,
+  };
+
+  const debug = {
+    log,
+    error,
+  };
+
+  const storage = {
+    useGet,
+    useKey,
+    useSet,
+    useState,
+    useToggle,
+    useCounter,
+  };
+
+  const events = {
+    useOn,
+    useEmit,
+    useTopic,
+  };
+
+  // time
+  //   tempo
+  //     get
+  //     set
+  //     onChanged
+  //   useUpdate
+  //   useWholeNotes
+  //   useNextWholeNote
+  //   getNearestWholeNote
+
+  return {
+    debug,
+    events,
+    graphics,
+    input,
+    physics,
+    time,
+    storage,
   };
 };
