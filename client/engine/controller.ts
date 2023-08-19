@@ -2,7 +2,7 @@ import { Button } from "./button";
 import { Joystick } from "./joystick";
 
 export class Controller {
-  public readonly = new Button(this.gamepadIndex, 0);
+  public readonly triangle = new Button(this.gamepadIndex, 0);
 
   public readonly circle = new Button(this.gamepadIndex, 1);
 
