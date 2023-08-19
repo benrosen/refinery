@@ -1,5 +1,6 @@
 import * as CANNON from "cannon-es";
 import * as THREE from "three";
+import * as TONE from "tone";
 import { Controller } from "./controller";
 import { Input } from "./input";
 import { State } from "./state";
@@ -10,6 +11,8 @@ export class Engine {
   public static readonly topic = Topic;
 
   public static readonly state = State;
+
+  public static readonly audio = TONE;
 
   public static readonly physics = new CANNON.World();
 
@@ -22,7 +25,10 @@ export class Engine {
     1000,
   );
 
-  public static readonly renderer = new THREE.WebGLRenderer();
+  public static readonly renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    canvas: window.document.getElementById("game") as HTMLCanvasElement,
+  });
 
   public static readonly controller = new Controller(0);
 

@@ -54,6 +54,6 @@ export class State<T extends JsonValueOrUndefined> {
   };
 
   public onChanged = (callback: (value: T) => void): (() => void) => {
-    return State.onChanged(this.stateChangedTopicName, callback);
+    return State.onChanged(this.key, callback);
   };
 }
