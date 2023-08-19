@@ -4,4 +4,6 @@ export type JsonValue =
   | boolean
   | null
   | JsonValue[]
-  | { [key: string]: JsonValue };
+  | {
+      [key: string]: JsonValue;
+    };

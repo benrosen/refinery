@@ -1,410 +1,276 @@
 import * as CANNON from "cannon-es";
 import * as THREE from "three";
-import { JsonValue } from "../shared";
+import { JsonValueOrUndefined } from "../shared";
 
-type JsonValueOrUndefined = JsonValue | undefined;
+export class Topic<T extends JsonValueOrUndefined> {
+  private static TARGET = new EventTarget();
 
-const STORAGE: {
-  [key: string]: JsonValueOrUndefined;
-} = {};
+  constructor(private readonly topic: string) {}
 
-const EVENTS: EventTarget = window;
+  public static emit = <T extends JsonValueOrUndefined>(
+    topic: string,
+    value: T,
+  ): T => {
+    Topic.TARGET.dispatchEvent(new CustomEvent(topic, { detail: value }));
 
-const CANVAS = document.getElementById("game") as HTMLCanvasElement;
-
-const get = async <T extends JsonValueOrUndefined>({
-  key,
-  initialValue,
-}: {
-  key: string;
-  initialValue?: T;
-}): Promise<T> => {
-  return key in STORAGE ? (STORAGE[key] as T) : initialValue!;
-};
-
-const set = async <T extends JsonValueOrUndefined>({
-  key,
-  value,
-}: {
-  key: string;
-  value: T;
-}): Promise<T> => {
-  STORAGE[key] = value;
-
-  return value;
-};
-
-const emit = async <T extends JsonValueOrUndefined>({
-  topic,
-  value,
-}: {
-  topic: string;
-  value: T;
-}): Promise<void> => {
-  const customEvent = new CustomEvent(topic, { detail: value });
-
-  EVENTS.dispatchEvent(customEvent);
-};
-
-const on = <T extends JsonValueOrUndefined>({
-  topic,
-  callback,
-}: {
-  topic: string;
-  callback: (value: T) => Promise<void>;
-}): (() => void) => {
-  const listener = async (event: Event) => {
-    const customEvent = event as CustomEvent<T>;
-    await callback(customEvent.detail);
+    return value;
   };
 
-  EVENTS.addEventListener(topic, listener as EventListener);
+  public static on = <T extends JsonValueOrUndefined>(
+    topic: string,
+    callback: (value: T) => void,
+  ): (() => void) => {
+    const handler = (event: CustomEvent<T>) => {
+      callback(event.detail);
+    };
 
-  // Return a function to remove the listener
-  return () => {
-    EVENTS.removeEventListener(topic, listener as EventListener);
+    Topic.TARGET.addEventListener(topic, handler);
+
+    return () => {
+      Topic.TARGET.removeEventListener(topic, handler);
+    };
   };
-};
 
-const useGet = <T extends JsonValueOrUndefined>({
-  key,
-  initialValue,
-}: {
-  key: string;
-  initialValue?: T;
-}): (() => Promise<T>) => {
-  return async () => {
-    return await get<T>({ key, initialValue });
+  public emit = (value: T): T => {
+    return Topic.emit<T>(this.topic, value);
   };
-};
 
-const useSet = <T extends JsonValueOrUndefined>({
-  key,
-}: {
-  key: string;
-}): ((value: T) => Promise<T>) => {
-  return async (value) => {
-    return await set<T>({ key, value });
+  public on = (callback: (value: T) => void): (() => void) => {
+    return Topic.on<T>(this.topic, callback);
   };
-};
+}
 
-const useEmit = <T extends JsonValueOrUndefined>({
-  topic,
-}: {
-  topic: string;
-}): ((value: T) => Promise<void>) => {
-  return async (value) => {
-    await emit<T>({ topic, value });
+export class Key<T extends JsonValueOrUndefined> {
+  private static STORE = new Map<string, JsonValueOrUndefined>();
+
+  constructor(
+    private readonly key: string,
+    private readonly defaultValue?: JsonValueOrUndefined,
+  ) {}
+
+  public static get = <T extends JsonValueOrUndefined>(
+    key: string,
+    defaultValue?: T,
+  ): T => {
+    return (Key.STORE.get(key) as T) || defaultValue;
   };
-};
 
-const useOn = <T extends JsonValueOrUndefined>({
-  topic,
-}: {
-  topic: string;
-}): ((callback: (value: T) => Promise<void>) => () => void) => {
-  return (callback) => {
-    return on<T>({ topic, callback });
+  public static set = <T extends JsonValueOrUndefined>(
+    key: string,
+    value: T,
+  ): T => {
+    Key.STORE.set(key, value);
+
+    return value;
   };
-};
 
-const useKey = <T extends JsonValueOrUndefined>({
-  key,
-  initialValue,
-}: {
-  key: string;
-  initialValue?: T;
-}): {
-  get: () => Promise<T>;
-  set: (value: T) => Promise<T>;
-} => {
-  return {
-    get: useGet<T>({ key, initialValue }),
-    set: useSet<T>({ key }),
+  public get = (): T => {
+    return Key.get<T>(this.key, this.defaultValue as T);
   };
-};
 
-const useTopic = <T extends JsonValueOrUndefined>({
-  topic,
-}: {
-  topic: string;
-}): {
-  emit: (value: T) => Promise<void>;
-  on: (callback: (value: T) => Promise<void>) => () => void;
-} => {
-  return {
-    emit: useEmit<T>({ topic }),
-    on: useOn<T>({ topic }),
+  public set = (value: T): T => {
+    return Key.set<T>(this.key, value);
   };
-};
+}
 
-const useState = <T extends JsonValueOrUndefined>({
-  key,
-  initialValue,
-}: {
-  key: string;
-  initialValue?: T;
-}): {
-  get: () => Promise<T>;
-  set: (value: T) => Promise<void>;
-  onChanged: (callback: (value: T) => Promise<void>) => () => void;
-} => {
-  const { get, set } = useKey<T>({ key, initialValue });
+export class State<T extends JsonValueOrUndefined> {
+  constructor(
+    private readonly key: string,
+    private readonly defaultValue?: T,
+  ) {}
 
-  const { emit: emitOnChangedEvent, on: onChanged } = useTopic<T>({
-    topic: key,
-  });
+  private get stateChangedTopicName(): string {
+    return State.getStateChangedTopicName(this.key);
+  }
 
-  return {
-    get,
-    set: async (value: T) => {
-      await set(value);
-      await emitOnChangedEvent(value);
-    },
-    onChanged,
+  public static get = <T extends JsonValueOrUndefined>(
+    key: string,
+    defaultValue?: T,
+  ): T => {
+    return Key.get(key, defaultValue);
   };
-};
 
-const useToggle = ({
-  key,
-  initialValue,
-}: {
-  key: string;
-  initialValue?: boolean;
-}): {
-  get: () => Promise<boolean>;
-  set: (value: boolean) => Promise<void>;
-  onChanged: (callback: (value: boolean) => Promise<void>) => () => void;
-  toggle: () => Promise<boolean>;
-} => {
-  const { get, set, onChanged } = useState<boolean>({
-    key,
-    initialValue,
-  });
+  public static set = <T extends JsonValueOrUndefined>(
+    key: string,
+    value: T,
+  ): T => {
+    const result = Key.set(key, value);
 
-  return {
-    get,
-    set,
-    onChanged,
-    toggle: async () => {
-      const value = await get();
-      await set(!value);
-      return !value;
-    },
+    const stateChangedTopicName = State.getStateChangedTopicName(key);
+
+    Topic.emit(stateChangedTopicName, result);
+
+    return result;
   };
-};
 
-const useCounter = ({
-  key,
-  initialValue,
-}: {
-  key: string;
-  initialValue?: number;
-}): {
-  get: () => Promise<number>;
-  set: (value: number) => Promise<void>;
-  onChanged: (callback: (value: number) => Promise<void>) => () => void;
-  increment: () => Promise<number>;
-  decrement: () => Promise<number>;
-} => {
-  const { get, set, onChanged } = useState<number>({
-    key,
-    initialValue,
-  });
+  public static onChanged = <T extends JsonValueOrUndefined>(
+    key: string,
+    callback: (value: T) => void,
+  ): (() => void) => {
+    const stateChangedTopicName = State.getStateChangedTopicName(key);
 
-  return {
-    get,
-    set,
-    onChanged,
-    increment: async () => {
-      const value = await get();
-      await set(value + 1);
-      return value + 1;
-    },
-    decrement: async () => {
-      const value = await get();
-      await set(value - 1);
-      return value - 1;
-    },
+    return Topic.on(stateChangedTopicName, callback);
   };
-};
 
-type Frame = {
+  protected static getStateChangedTopicName = (key: string): string => {
+    return `state:${key}:changed`;
+  };
+
+  public get = (): T => {
+    return State.get(this.key, this.defaultValue);
+  };
+
+  public set = (value: T): T => {
+    return State.set(this.key, value);
+  };
+
+  public onChanged = (callback: (value: T) => void): (() => void) => {
+    return State.onChanged(this.stateChangedTopicName, callback);
+  };
+}
+
+interface Frame {
   index: number;
   timestamp: number;
-  millisecondsSinceLastFrame: number;
-};
+  delta: number | undefined;
+}
 
-const useFrames = ({
-  onBeforeUpdate,
-  onAfterUpdate,
-}: {
-  onBeforeUpdate?: (frame: Frame) => Promise<void>;
-  onAfterUpdate?: (frame: Frame) => Promise<void>;
-}): ((handler: (frame: Frame) => Promise<void>) => () => void) => {
-  const { get: getFrameCount, set: setFrameCount } = useCounter({
-    key: "frameCount",
-    initialValue: 0,
-  });
+class Update {
+  private static readonly _isPaused = new State<boolean>("is-paused", false);
 
-  const { get: getTimestamp, set: setTimestamp } = useKey<number>({
-    key: "timestamp",
-  });
+  private static readonly frameCount = new State<number>("frame-count", 0);
 
-  const updateHandlers: ((frame: Frame) => Promise<void>)[] = [];
+  private static readonly timestamp = new State<number>("timestamp");
 
-  const update = async () => {
-    const [currentFrameCount, currentTimestamp] = await Promise.all([
-      getFrameCount(),
-      getTimestamp(),
-    ]);
+  private static readonly beforeUpdateHandlers = new Set<
+    (frame: Frame) => Promise<void>
+  >();
+
+  private static readonly updateHandlers = new Set<
+    (frame: Frame) => Promise<void>
+  >();
+
+  private static readonly afterUpdateHandlers = new Set<
+    (frame: Frame) => Promise<void>
+  >();
+
+  public static get isPaused() {
+    return Update._isPaused.get();
+  }
+
+  public static onPaused = (callback: () => void) => {
+    return Update._isPaused.onChanged((value) => {
+      if (value) {
+        callback();
+      }
+    });
+  };
+
+  public static onResumed = (callback: () => void) => {
+    return Update._isPaused.onChanged((value) => {
+      if (!value) {
+        callback();
+      }
+    });
+  };
+
+  public static pause = () => {
+    Update._isPaused.set(true);
+  };
+
+  public static resume = () => {
+    Update._isPaused.set(false);
+  };
+
+  public static before = (handler: (frame: Frame) => Promise<void>) => {
+    Update.beforeUpdateHandlers.add(handler);
+
+    return () => {
+      Update.beforeUpdateHandlers.delete(handler);
+    };
+  };
+
+  public static on = (handler: (frame: Frame) => Promise<void>) => {
+    Update.updateHandlers.add(handler);
+
+    return () => {
+      Update.updateHandlers.delete(handler);
+    };
+  };
+
+  public static after = (handler: (frame: Frame) => Promise<void>) => {
+    Update.afterUpdateHandlers.add(handler);
+
+    return () => {
+      Update.afterUpdateHandlers.delete(handler);
+    };
+  };
+
+  private static update = async () => {
+    const frameCount = Update.frameCount.get();
+
+    const timestamp = Update.timestamp.get();
+
+    const nextFrameCount = frameCount + 1;
 
     const nextTimestamp = Date.now();
 
-    const nextFrameIndex = currentFrameCount + 1;
+    Update.frameCount.set(nextFrameCount);
+
+    Update.timestamp.set(nextTimestamp);
+
+    if (Update.isPaused) {
+      requestAnimationFrame(Update.update);
+
+      return;
+    }
 
     const nextFrame: Frame = {
-      index: nextFrameIndex,
+      index: nextFrameCount,
       timestamp: nextTimestamp,
-      millisecondsSinceLastFrame: nextTimestamp - currentTimestamp,
+      delta: timestamp ? nextTimestamp - timestamp : undefined,
     };
 
-    await Promise.all([
-      setFrameCount(nextFrame.index),
-      setTimestamp(nextFrame.timestamp),
-    ]);
+    await Promise.all(
+      Array.from(Update.beforeUpdateHandlers).map((handler) => {
+        return handler(nextFrame);
+      }),
+    );
 
-    if (onBeforeUpdate) {
-      await onBeforeUpdate(nextFrame);
-    }
+    await Promise.all(
+      Array.from(Update.updateHandlers).map((handler) => {
+        return handler(nextFrame);
+      }),
+    );
 
-    await Promise.all(updateHandlers.map((handler) => handler(nextFrame)));
+    await Promise.all(
+      Array.from(Update.afterUpdateHandlers).map((handler) => {
+        return handler(nextFrame);
+      }),
+    );
 
-    if (onAfterUpdate) {
-      await onAfterUpdate(nextFrame);
-    }
-
-    requestAnimationFrame(update);
+    requestAnimationFrame(Update.update);
   };
 
-  requestAnimationFrame(update);
+  static {
+    (async () => {
+      await Update.update();
+    })();
+  }
+}
 
-  return (handler) => {
-    updateHandlers.push(handler);
+class Input {
+  private static gamepads = navigator.getGamepads();
 
-    return () => {
-      updateHandlers.splice(updateHandlers.indexOf(handler), 1);
-    };
-  };
-};
-
-const createLogger = ({
-  createLogEntry,
-}: {
-  createLogEntry: (entry: JsonValue) => void;
-}) => {
-  return <T extends JsonValue>(entry: T) => {
-    createLogEntry(entry);
-  };
-};
-
-const createScene = () => {
-  const scene = new THREE.Scene();
-
-  scene.background = new THREE.Color(0x000000);
-
-  return scene;
-};
-
-const createCamera = () => {
-  const camera = new THREE.PerspectiveCamera(
-    75,
-    CANVAS.clientWidth / CANVAS.clientHeight,
-    0.1,
-    1000,
-  );
-
-  on({
-    topic: "resize",
-    callback: async () => {
-      // TODO resize camera, etc.
-    },
-  });
-
-  return camera;
-};
-
-const createRenderer = () => {
-  const renderer = new THREE.WebGLRenderer({
-    canvas: CANVAS,
-    antialias: true,
-  });
-
-  renderer.pixelRatio = window.devicePixelRatio;
-
-  // BUG when this is enabled, the canvas is not resized
-  // renderer.setSize(window.innerWidth, window.innerHeight);
-
-  return renderer;
-};
-
-const createPhysics = () => {
-  return new CANNON.World();
-};
-
-const createGamepadAPIPollerPublisher = () => {
-  let gamepads: Gamepad[] = [];
-
-  const emitGamepadConnectedEvent = useEmit<Gamepad["index"]>({
-    topic: "GamepadConnected",
-  });
-
-  const emitGamepadDisconnectedEvent = useEmit<Gamepad["index"]>({
-    topic: "GamepadDisconnected",
-  });
-
-  window.addEventListener("gamepadconnected", async (event: GamepadEvent) => {
-    await emitGamepadConnectedEvent(event.gamepad.index);
-  });
-
-  window.addEventListener(
-    "gamepaddisconnected",
-    async (event: GamepadEvent) => {
-      await emitGamepadDisconnectedEvent(event.gamepad.index);
-    },
-  );
-
-  const emitGamepadButtonDownEvent = useEmit<{
-    gamepadIndex: Gamepad["index"];
-    buttonIndex: number;
-  }>({
-    topic: "GamepadButtonDown",
-  });
-
-  const emitGamepadButtonUpEvent = useEmit<{
-    gamepadIndex: Gamepad["index"];
-    buttonIndex: number;
-  }>({
-    topic: "GamepadButtonUp",
-  });
-
-  const emitGamepadAxisValueChangedEvent = useEmit<{
-    gamepadIndex: Gamepad["index"];
-    axisIndex: number;
-    value: number;
-  }>({
-    topic: "GamepadAxisValueChanged",
-  });
-
-  const pollGamepadsAndPublishEvents = () => {
+  public static poll = () => {
     const nextGamepads = navigator.getGamepads();
 
-    gamepads.forEach(async (gamepad, index) => {
+    Input.gamepads.forEach((gamepad) => {
       if (gamepad === null) {
         return;
       }
 
-      const nextGamepad = nextGamepads[index];
+      const nextGamepad: Gamepad = nextGamepads[gamepad.index];
 
       if (!nextGamepad) {
         return;
@@ -412,12 +278,12 @@ const createGamepadAPIPollerPublisher = () => {
 
       nextGamepad.buttons.forEach((button, buttonIndex) => {
         if (button.pressed && !gamepad.buttons[buttonIndex].pressed) {
-          emitGamepadButtonDownEvent({
+          Topic.emit("GamepadButtonPressed", {
             gamepadIndex: gamepad.index,
             buttonIndex,
           });
         } else if (!button.pressed && gamepad.buttons[buttonIndex].pressed) {
-          emitGamepadButtonUpEvent({
+          Topic.emit("GamepadButtonReleased", {
             gamepadIndex: gamepad.index,
             buttonIndex,
           });
@@ -426,7 +292,7 @@ const createGamepadAPIPollerPublisher = () => {
 
       nextGamepad.axes.forEach((axis, axisIndex) => {
         if (axis !== gamepad.axes[axisIndex]) {
-          emitGamepadAxisValueChangedEvent({
+          Topic.emit("GamepadAxisChanged", {
             gamepadIndex: gamepad.index,
             axisIndex,
             value: axis,
@@ -435,410 +301,240 @@ const createGamepadAPIPollerPublisher = () => {
       });
     });
 
-    gamepads = nextGamepads;
+    Input.gamepads = nextGamepads;
   };
 
-  return {
-    pollGamepadsAndPublishEvents,
-  };
-};
+  static {
+    window.addEventListener("gamepadconnected", (event) => {
+      Topic.emit("GamepadConnected", event.gamepad.index);
+    });
 
-export const createEngine = () => {
-  const physics = createPhysics();
+    window.addEventListener("gamepaddisconnected", (event) => {
+      Topic.emit("GamepadDisconnected", event.gamepad.index);
+    });
+  }
+}
 
-  const renderer = createRenderer();
+class Button {
+  private readonly _isPressed = new State<boolean>(
+    this.isPressedKeyName,
+    false,
+  );
 
-  const camera = createCamera();
-
-  const scene = createScene();
-
-  const log = createLogger({
-    createLogEntry: (entry: JsonValue) => {
+  constructor(
+    private readonly gamepadIndex: number,
+    private readonly buttonIndex: number,
+  ) {
+    Topic.on<{
+      gamepadIndex: number;
+      buttonIndex: number;
+    }>("GamepadButtonPressed", (event) => {
       if (
-        typeof entry === "object" &&
-        !Array.isArray(entry) &&
-        entry !== null &&
-        entry.level === "error"
+        event.gamepadIndex === this.gamepadIndex &&
+        event.buttonIndex === this.buttonIndex
       ) {
-        console.error(JSON.stringify(entry, null, 2));
-      } else {
-        console.log(JSON.stringify(entry, null, 2));
+        this._isPressed.set(true);
       }
-    },
-  });
-
-  const error = (error: Error | JsonValue) => {
-    log({
-      level: "error",
-      error: error instanceof Error ? error.message : error,
-    });
-  };
-
-  const { pollGamepadsAndPublishEvents } = createGamepadAPIPollerPublisher();
-
-  const useFrame = useFrames({
-    onBeforeUpdate: async (frame) => {
-      pollGamepadsAndPublishEvents();
-
-      physics.fixedStep(1 / 60, frame.millisecondsSinceLastFrame / 1000);
-    },
-    onAfterUpdate: async (frame) => {
-      camera.aspect = CANVAS.clientWidth / CANVAS.clientHeight;
-
-      camera.updateProjectionMatrix();
-
-      renderer.render(scene, camera);
-    },
-  });
-
-  const useUpdate = (
-    callback: ({
-      scene,
-      camera,
-      renderer,
-      physics,
-      frame,
-    }: {
-      scene: THREE.Scene;
-      camera: THREE.Camera;
-      renderer: THREE.Renderer;
-      physics: CANNON.World;
-      frame: Frame;
-    }) => Promise<void>,
-  ) => {
-    return useFrame(async (frame) => {
-      await callback({
-        scene,
-        camera,
-        renderer,
-        physics,
-        frame,
-      });
-    });
-  };
-
-  const useGamepadConnected = useOn<{
-    gamepadIndex: Gamepad["index"];
-  }>({
-    topic: "GamepadConnected",
-  });
-
-  const useGamepadDisconnected = useOn<{
-    gamepadIndex: Gamepad["index"];
-  }>({
-    topic: "GamepadDisconnected",
-  });
-
-  const useGamepadSquareButton = ({
-    gamepadIndex,
-  }: {
-    gamepadIndex: Gamepad["index"];
-  }) => {
-    return useGamepadButton({
-      buttonIndex: 2,
-      gamepadIndex,
-    });
-  };
-
-  const useGamepadCrossButton = ({
-    gamepadIndex,
-  }: {
-    gamepadIndex: Gamepad["index"];
-  }) => {
-    return useGamepadButton({
-      buttonIndex: 0,
-      gamepadIndex,
-    });
-  };
-
-  const useGamepadCircleButton = ({
-    gamepadIndex,
-  }: {
-    gamepadIndex: Gamepad["index"];
-  }) => {
-    return useGamepadButton({
-      buttonIndex: 1,
-      gamepadIndex,
-    });
-  };
-
-  const useGamepadTriangleButton = ({
-    gamepadIndex,
-  }: {
-    gamepadIndex: Gamepad["index"];
-  }) => {
-    return useGamepadButton({
-      buttonIndex: 3,
-      gamepadIndex,
-    });
-  };
-
-  const useGamepadButton = ({
-    buttonIndex,
-    gamepadIndex,
-  }: {
-    buttonIndex: number;
-    gamepadIndex: Gamepad["index"];
-  }) => {
-    const { get, onChanged, set } = useToggle({
-      key: `GamepadButton:${gamepadIndex}:${buttonIndex}}`,
-      initialValue: false,
     });
 
-    useGamepadButtonDown(async (event) => {
+    Topic.on<{
+      gamepadIndex: number;
+      buttonIndex: number;
+    }>("GamepadButtonReleased", (event) => {
       if (
-        buttonIndex !== event.buttonIndex ||
-        gamepadIndex !== event.gamepadIndex
+        event.gamepadIndex === this.gamepadIndex &&
+        event.buttonIndex === this.buttonIndex
       ) {
-        return;
+        this._isPressed.set(false);
       }
-
-      await set(true);
     });
+  }
 
-    useGamepadButtonUp(async (event) => {
+  public get isPressed(): boolean {
+    return this._isPressed.get();
+  }
+
+  private get isPressedKeyName(): string {
+    return Button.getIsPressedKeyName(this.gamepadIndex, this.buttonIndex);
+  }
+
+  private static getIsPressedKeyName = (
+    gamepadIndex: number,
+    buttonIndex: number,
+  ): string => {
+    return `gamepad/${gamepadIndex}/button/${buttonIndex}/isPressed`;
+  };
+
+  public onPressed = (callback: () => void): (() => void) => {
+    return this._isPressed.onChanged((isPressed) => {
+      if (isPressed) {
+        callback();
+      }
+    });
+  };
+
+  public onReleased = (callback: () => void): (() => void) => {
+    return this._isPressed.onChanged((isPressed) => {
+      if (!isPressed) {
+        callback();
+      }
+    });
+  };
+}
+
+class Axis {
+  private readonly _value = new State<number>(this.valueKeyName, 0);
+
+  constructor(
+    private readonly gamepadIndex: number,
+    private readonly axisIndex: number,
+  ) {
+    Topic.on<{
+      gamepadIndex: number;
+      axisIndex: number;
+      value: number;
+    }>("GamepadAxisChanged", (event) => {
       if (
-        buttonIndex !== event.buttonIndex ||
-        gamepadIndex !== event.gamepadIndex
+        event.gamepadIndex === this.gamepadIndex &&
+        event.axisIndex === this.axisIndex
       ) {
-        return;
+        this._value.set(event.value);
       }
-
-      await set(false);
     });
+  }
 
-    return {
-      get,
-      onChanged,
-    };
-  };
+  public get value(): number {
+    return this._value.get();
+  }
 
-  const useGamepadButtonDown = useOn<{
-    gamepadIndex: Gamepad["index"];
-    buttonIndex: number;
-  }>({
-    topic: "GamepadButtonDown",
-  });
+  private get valueKeyName(): string {
+    return Axis.getValueKeyName(this.gamepadIndex, this.axisIndex);
+  }
 
-  const useGamepadButtonUp = useOn<{
-    gamepadIndex: Gamepad["index"];
-    buttonIndex: number;
-  }>({
-    topic: "GamepadButtonUp",
-  });
+  private static getValueKeyName(
+    gamepadIndex: number,
+    axisIndex: number,
+  ): string {
+    return `gamepad/${gamepadIndex}/axis/${axisIndex}/value`;
+  }
 
-  const useGamepadAxisValueChanged = useOn<{
-    gamepadIndex: Gamepad["index"];
-    axisIndex: number;
-    value: number;
-  }>({
-    topic: "GamepadAxisValueChanged",
-  });
+  public onChanged(callback: (value: number) => void): void {
+    this._value.onChanged(callback);
+  }
 
-  const useGamepadAxis = ({
-    axisIndex,
-    gamepadIndex,
-  }: {
-    axisIndex: number;
-    gamepadIndex: Gamepad["index"];
-  }) => {
-    const { get, set, onChanged } = useState<number>({
-      key: `GamepadAxis:${gamepadIndex}:${axisIndex}`,
-      initialValue: 0,
-    });
-
-    useGamepadAxisValueChanged(async (event) => {
-      if (
-        axisIndex !== event.axisIndex ||
-        gamepadIndex !== event.gamepadIndex
-      ) {
-        return;
+  public onPositive(callback: () => void): void {
+    this._value.onChanged((value) => {
+      if (value > 0 && this.value <= 0) {
+        callback();
       }
-
-      await set(event.value);
     });
+  }
 
-    return {
-      get,
-      onChanged,
-    };
-  };
-
-  const useGamepadStick = ({
-    buttonIndex,
-    gamepadIndex,
-    horizontalAxisIndex,
-    verticalAxisIndex,
-  }: {
-    buttonIndex: number;
-    gamepadIndex: Gamepad["index"];
-    horizontalAxisIndex: number;
-    verticalAxisIndex: number;
-  }) => {
-    const {
-      get: getHorizontalAxisValue,
-      onChanged: onHorizontalAxisValueChanged,
-    } = useGamepadAxis({
-      axisIndex: horizontalAxisIndex,
-      gamepadIndex,
-    });
-
-    const { get: getVerticalAxisValue, onChanged: onVerticalAxisValueChanged } =
-      useGamepadAxis({
-        axisIndex: verticalAxisIndex,
-        gamepadIndex,
-      });
-
-    const { get: getButtonValue, onChanged: onButtonValueChanged } =
-      useGamepadButton({
-        buttonIndex,
-        gamepadIndex,
-      });
-
-    return {
-      getHorizontalAxisValue,
-      onHorizontalAxisValueChanged,
-      getVerticalAxisValue,
-      onVerticalAxisValueChanged,
-      getButtonValue,
-      onButtonValueChanged,
-    };
-  };
-
-  const useGamepadLeftStick = ({
-    gamepadIndex,
-  }: {
-    gamepadIndex: Gamepad["index"];
-  }) => {
-    return useGamepadStick({
-      buttonIndex: 14,
-      gamepadIndex,
-      horizontalAxisIndex: 0,
-      verticalAxisIndex: 1,
-    });
-  };
-
-  const useGamepadRightStick = ({
-    gamepadIndex,
-  }: {
-    gamepadIndex: Gamepad["index"];
-  }) => {
-    return useGamepadStick({
-      buttonIndex: 15,
-      gamepadIndex,
-      horizontalAxisIndex: 2,
-      verticalAxisIndex: 3,
-    });
-  };
-
-  const useGamepad = ({ gamepadIndex }: { gamepadIndex: Gamepad["index"] }) => {
-    const {
-      get: getIsConnected,
-      set: setIsConnected,
-      onChanged: onIsConnectedChanged,
-    } = useToggle({
-      key: `Gamepad:${gamepadIndex}`,
-      initialValue: false,
-    });
-
-    useGamepadConnected(async (event) => {
-      if (gamepadIndex !== event.gamepadIndex) {
-        return;
+  public onNegative(callback: () => void): void {
+    this._value.onChanged((value) => {
+      if (value < 0 && this.value >= 0) {
+        callback();
       }
-
-      await setIsConnected(true);
     });
+  }
 
-    useGamepadDisconnected(async (event) => {
-      if (gamepadIndex !== event.gamepadIndex) {
-        return;
+  public onMaximum(callback: () => void): void {
+    this._value.onChanged((value) => {
+      if (value === 1 && this.value !== 1) {
+        callback();
       }
+    });
+  }
 
-      await setIsConnected(false);
+  public onMinimum(callback: () => void): void {
+    this._value.onChanged((value) => {
+      if (value === -1 && this.value !== -1) {
+        callback();
+      }
+    });
+  }
+}
+
+class Joystick {
+  public readonly button = new Button(this.gamepadIndex, this.buttonIndex);
+
+  public readonly horizontalAxis = new Axis(
+    this.gamepadIndex,
+    this.horizontalAxisIndex,
+  );
+
+  public readonly verticalAxis = new Axis(
+    this.gamepadIndex,
+    this.verticalAxisIndex,
+  );
+
+  constructor(
+    private readonly gamepadIndex: number,
+    private readonly buttonIndex: number,
+    private readonly horizontalAxisIndex: number,
+    private readonly verticalAxisIndex: number,
+  ) {}
+}
+
+class Controller {
+  public readonly = new Button(this.gamepadIndex, 0);
+
+  public readonly circle = new Button(this.gamepadIndex, 1);
+
+  public readonly cross = new Button(this.gamepadIndex, 2);
+
+  public readonly square = new Button(this.gamepadIndex, 3);
+
+  public readonly leftStick = new Joystick(this.gamepadIndex, 0, 1, 0);
+
+  public readonly rightStick = new Joystick(this.gamepadIndex, 2, 3, 1);
+
+  constructor(private readonly gamepadIndex: number) {}
+}
+
+export class Engine {
+  public static readonly physics = new CANNON.World();
+
+  public static readonly scene = new THREE.Scene();
+
+  public static readonly camera = new THREE.PerspectiveCamera(
+    75,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000,
+  );
+
+  public static readonly renderer = new THREE.WebGLRenderer();
+
+  public static readonly controller = new Controller(0);
+
+  public static get isPaused(): boolean {
+    return Update.isPaused;
+  }
+
+  public static pause = (): void => {
+    Update.pause();
+  };
+
+  public static resume = (): void => {
+    Update.resume();
+  };
+
+  public static readonly onUpdate = (
+    callback: () => Promise<void>,
+  ): (() => void) => {
+    return Update.on(callback);
+  };
+
+  static {
+    Update.before(async ({ delta }) => {
+      Input.poll();
+
+      Engine.physics.fixedStep(1 / 60, delta);
     });
 
-    return {
-      getIsConnected,
-      onIsConnectedChanged,
-      leftStick: useGamepadLeftStick({
-        gamepadIndex,
-      }),
-      rightStick: useGamepadRightStick({
-        gamepadIndex,
-      }),
-      circleButton: useGamepadCircleButton({
-        gamepadIndex,
-      }),
-      crossButton: useGamepadCrossButton({
-        gamepadIndex,
-      }),
-      squareButton: useGamepadSquareButton({
-        gamepadIndex,
-      }),
-      triangleButton: useGamepadTriangleButton({
-        gamepadIndex,
-      }),
-    };
-  };
-
-  const input = {
-    gamepads: {
-      primary: useGamepad({ gamepadIndex: 0 }),
-      secondary: useGamepad({ gamepadIndex: 1 }),
-    },
-  };
-
-  const time = {
-    // tempo:
-    useUpdate,
-    // useWholeNotes,
-  };
-
-  // how should "transitions" work?
-
-  const graphics = {
-    camera,
-    renderer,
-    scene,
-  };
-
-  const debug = {
-    log,
-    error,
-  };
-
-  const storage = {
-    useGet,
-    useKey,
-    useSet,
-    useState,
-    useToggle,
-    useCounter,
-  };
-
-  const events = {
-    useOn,
-    useEmit,
-    useTopic,
-  };
-
-  // time
-  //   tempo
-  //     get
-  //     set
-  //     onChanged
-  //   useUpdate
-  //   useWholeNotes
-  //   useNextWholeNote
-  //   getNearestWholeNote
-
-  return {
-    debug,
-    events,
-    graphics,
-    input,
-    physics,
-    time,
-    storage,
-  };
-};
+    Update.after(async () => {
+      Engine.renderer.render(Engine.scene, Engine.camera);
+    });
+  }
+}
