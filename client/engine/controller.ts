@@ -10,7 +10,7 @@ export class Controller {
 
   public readonly square = new Button(this.gamepadIndex, 2);
 
-  public readonly leftStick = new Joystick(this.gamepadIndex, 14, 0, 1);
+  public readonly leftStick = new Joystick(this.gamepadIndex, 10, 0, 1);
 
   public readonly rightStick = new Joystick(this.gamepadIndex, 15, 2, 3);
 
