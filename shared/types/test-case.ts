@@ -16,12 +16,12 @@ export interface TestCase<F extends (...args: any[]) => any> {
   readonly expectedResult: ReturnType<F> | Error;
 
   /**
-   * An optional function to be executed before the pure function. Useful for setting up.
+   * An optional function to be executed beforeEachUpdate the pure function. Useful for setting up.
    */
   readonly before?: () => void;
 
   /**
-   * An optional function to be executed after the pure function. Useful for cleaning up.
+   * An optional function to be executed afterEachUpdate the pure function. Useful for cleaning up.
    */
   readonly after?: () => void;
 

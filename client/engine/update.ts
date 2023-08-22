@@ -13,15 +13,15 @@ export class Update {
 
   private static readonly timestamp = new State<number>("timestamp");
 
-  private static readonly beforeUpdateHandlers = new Set<
+  private static readonly beforeEachUpdateHandlers = new Set<
     (frame: Frame) => Promise<void>
   >();
 
-  private static readonly updateHandlers = new Set<
+  private static readonly duringEachUpdateHandlers = new Set<
     (frame: Frame) => Promise<void>
   >();
 
-  private static readonly afterUpdateHandlers = new Set<
+  private static readonly afterEachUpdateHandlers = new Set<
     (frame: Frame) => Promise<void>
   >();
 
@@ -53,27 +53,33 @@ export class Update {
     Update._isPaused.set(false);
   };
 
-  public static before = (handler: (frame: Frame) => Promise<void>) => {
-    Update.beforeUpdateHandlers.add(handler);
+  public static beforeEachUpdate = (
+    handler: (frame: Frame) => Promise<void>,
+  ) => {
+    Update.beforeEachUpdateHandlers.add(handler);
 
     return () => {
-      Update.beforeUpdateHandlers.delete(handler);
+      Update.beforeEachUpdateHandlers.delete(handler);
     };
   };
 
-  public static on = (handler: (frame: Frame) => Promise<void>) => {
-    Update.updateHandlers.add(handler);
+  public static duringEachUpdate = (
+    handler: (frame: Frame) => Promise<void>,
+  ) => {
+    Update.duringEachUpdateHandlers.add(handler);
 
     return () => {
-      Update.updateHandlers.delete(handler);
+      Update.duringEachUpdateHandlers.delete(handler);
     };
   };
 
-  public static after = (handler: (frame: Frame) => Promise<void>) => {
-    Update.afterUpdateHandlers.add(handler);
+  public static afterEachUpdate = (
+    handler: (frame: Frame) => Promise<void>,
+  ) => {
+    Update.afterEachUpdateHandlers.add(handler);
 
     return () => {
-      Update.afterUpdateHandlers.delete(handler);
+      Update.afterEachUpdateHandlers.delete(handler);
     };
   };
 
@@ -103,19 +109,19 @@ export class Update {
     };
 
     await Promise.all(
-      Array.from(Update.beforeUpdateHandlers).map((handler) => {
+      Array.from(Update.beforeEachUpdateHandlers).map((handler) => {
         return handler(nextFrame);
       }),
     );
 
     await Promise.all(
-      Array.from(Update.updateHandlers).map((handler) => {
+      Array.from(Update.duringEachUpdateHandlers).map((handler) => {
         return handler(nextFrame);
       }),
     );
 
     await Promise.all(
-      Array.from(Update.afterUpdateHandlers).map((handler) => {
+      Array.from(Update.afterEachUpdateHandlers).map((handler) => {
         return handler(nextFrame);
       }),
     );

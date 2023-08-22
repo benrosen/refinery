@@ -12,7 +12,17 @@ export const createServer = (
   const expressApplication = express();
 
   expressApplication.use(cors());
-  expressApplication.use(helmet());
+  expressApplication.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+          "script-src": ["'self'", "blob:"],
+          "worker-src": ["'self'", "blob:"],
+        },
+      },
+    }),
+  );
   expressApplication.use(express.json());
 
   expressApplication.use((req, res, next) => {

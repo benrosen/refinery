@@ -1,9 +1,14 @@
+import { Controller } from "./controller";
 import { Topic } from "./topic";
 
 export class Input {
+  public static readonly primaryController = new Controller(0);
+
+  public static readonly secondaryController = new Controller(1);
+
   private static gamepads = navigator.getGamepads();
 
-  public static poll = () => {
+  public static update = () => {
     const nextGamepads = navigator.getGamepads();
 
     Input.gamepads.forEach((gamepad) => {

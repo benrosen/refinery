@@ -1,36 +1,41 @@
-import * as CANNON from "cannon-es";
-import * as THREE from "three";
-import * as TONE from "tone";
 import { Controller } from "./controller";
+import { Graphics } from "./graphics";
 import { Input } from "./input";
+import { Physics } from "./physics";
 import { State } from "./state";
 import { Topic } from "./topic";
 import { Update } from "./update";
 
 export class Engine {
-  public static readonly topic = Topic;
+  // public static readonly physics = Physics;
 
-  public static readonly state = State;
+  // public static readonly audio = Audio;
 
-  public static readonly audio = TONE;
+  public static readonly get = State.get;
 
-  public static readonly physics = new CANNON.World();
+  public static readonly set = State.set;
 
-  public static readonly scene = new THREE.Scene();
+  public static readonly onChanged = State.onChanged;
 
-  public static readonly camera = new THREE.PerspectiveCamera(
-    75,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    1000,
-  );
+  public static readonly emit = Topic.emit;
 
-  public static readonly renderer = new THREE.WebGLRenderer({
-    antialias: true,
-    canvas: window.document.getElementById("game") as HTMLCanvasElement,
-  });
+  public static readonly on = Topic.on;
 
-  public static readonly controller = new Controller(0);
+  public static get primaryController(): Controller {
+    return Input.primaryController;
+  }
+
+  public static get secondaryController(): Controller {
+    return Input.secondaryController;
+  }
+
+  public static get backgroundColor(): string {
+    return Graphics.backgroundColor;
+  }
+
+  public static set backgroundColor(value: string) {
+    Graphics.backgroundColor = value;
+  }
 
   public static get isPaused(): boolean {
     return Update.isPaused;
@@ -55,18 +60,18 @@ export class Engine {
   public static readonly onUpdate = (
     callback: () => Promise<void>,
   ): (() => void) => {
-    return Update.on(callback);
+    return Update.duringEachUpdate(callback);
   };
 
   static {
-    Update.before(async ({ delta }) => {
-      Input.poll();
+    Update.beforeEachUpdate(async ({ delta }) => {
+      Input.update();
 
-      Engine.physics.fixedStep(1 / 60, delta);
+      Physics.update(delta);
     });
 
-    Update.after(async () => {
-      Engine.renderer.render(Engine.scene, Engine.camera);
+    Update.afterEachUpdate(async () => {
+      Graphics.update();
     });
   }
 }
