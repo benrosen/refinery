@@ -1,8 +1,10 @@
 import { Controller } from "./controller";
+import { Entity } from "./entity";
 import { Graphics } from "./graphics";
 import { Input } from "./input";
 import { Physics } from "./physics";
 import { State } from "./state";
+import { System } from "./system";
 import { Topic } from "./topic";
 import { Update } from "./update";
 
@@ -11,15 +13,23 @@ export class Engine {
 
   // public static readonly audio = Audio;
 
-  public static readonly get = State.get;
+  public static readonly getState = State.get;
 
-  public static readonly set = State.set;
+  public static readonly setState = State.set;
 
-  public static readonly onChanged = State.onChanged;
+  public static readonly onStateChanged = State.onChanged;
 
-  public static readonly emit = Topic.emit;
+  public static readonly emitEvent = Topic.emit;
 
-  public static readonly on = Topic.on;
+  public static readonly handleEvent = Topic.on;
+
+  public static createEntity = Entity.create;
+
+  public static deleteEntity = Entity.delete;
+
+  public static createSystem = System.create;
+
+  public static deleteSystem = System.delete;
 
   public static get primaryController(): Controller {
     return Input.primaryController;
@@ -57,18 +67,14 @@ export class Engine {
     return Update.onResumed(callback);
   };
 
-  public static readonly onUpdate = (
-    callback: () => Promise<void>,
-  ): (() => void) => {
-    return Update.duringEachUpdate(callback);
-  };
-
   static {
     Update.beforeEachUpdate(async ({ delta }) => {
       Input.update();
 
       Physics.update(delta);
     });
+
+    Update.duringEachUpdate(System.update);
 
     Update.afterEachUpdate(async () => {
       Graphics.update();
