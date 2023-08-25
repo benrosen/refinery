@@ -7,7 +7,7 @@ export class Topic<T extends JsonValueOrUndefined> {
 
   public static emit = <T extends JsonValueOrUndefined>(
     topic: string,
-    value: T,
+    value?: T,
   ): T => {
     Topic.TARGET.dispatchEvent(new CustomEvent(topic, { detail: value }));
 

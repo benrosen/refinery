@@ -1,71 +1,43 @@
-import { Controller } from "./controller";
-import { Entity } from "./entity";
+import { Debug } from "./debug";
 import { Graphics } from "./graphics";
 import { Input } from "./input";
 import { Physics } from "./physics";
 import { State } from "./state";
-import { System } from "./system";
 import { Topic } from "./topic";
 import { Update } from "./update";
 
 export class Engine {
-  // public static readonly physics = Physics;
+  public static readonly get = State.get;
 
-  // public static readonly audio = Audio;
+  public static readonly set = State.set;
 
-  public static readonly getState = State.get;
+  public static readonly emit = Topic.emit;
 
-  public static readonly setState = State.set;
+  public static readonly on = Topic.on;
 
-  public static readonly onStateChanged = State.onChanged;
+  public static readonly onChanged = State.onChanged;
 
-  public static readonly emitEvent = Topic.emit;
+  public static readonly duringEachUpdate = Update.duringEachUpdate;
 
-  public static readonly handleEvent = Topic.on;
+  public static readonly pause = Update.pause;
 
-  public static createEntity = Entity.create;
+  public static readonly resume = Update.resume;
 
-  public static deleteEntity = Entity.delete;
+  public static readonly onPaused = Update.onPaused;
 
-  public static createSystem = System.create;
+  public static readonly onResumed = Update.onResumed;
 
-  public static deleteSystem = System.delete;
+  public static readonly log = Debug.log;
 
-  public static get primaryController(): Controller {
-    return Input.primaryController;
-  }
+  public static readonly report = Debug.report;
 
-  public static get secondaryController(): Controller {
-    return Input.secondaryController;
-  }
+  public static readonly primaryController = Input.primaryController;
 
-  public static get backgroundColor(): string {
-    return Graphics.backgroundColor;
-  }
+  public static readonly secondaryController = Input.secondaryController;
 
-  public static set backgroundColor(value: string) {
-    Graphics.backgroundColor = value;
-  }
+  public static readonly backgroundColor = Graphics.backgroundColor;
 
-  public static get isPaused(): boolean {
-    return Update.isPaused;
-  }
-
-  public static pause = (): void => {
-    Update.pause();
-  };
-
-  public static resume = (): void => {
-    Update.resume();
-  };
-
-  public static readonly onPaused = (callback: () => void): (() => void) => {
-    return Update.onPaused(callback);
-  };
-
-  public static readonly onResumed = (callback: () => void): (() => void) => {
-    return Update.onResumed(callback);
-  };
+  public static readonly isPaused = Update.isPaused;
 
   static {
     Update.beforeEachUpdate(async ({ delta }) => {
@@ -74,10 +46,16 @@ export class Engine {
       Physics.update(delta);
     });
 
-    Update.duringEachUpdate(System.update);
-
     Update.afterEachUpdate(async () => {
       Graphics.update();
+    });
+
+    Debug.onLog((value) => {
+      console.log(value);
+    });
+
+    Debug.onReport((report) => {
+      console.error(report);
     });
   }
 }
