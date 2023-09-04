@@ -1,4 +1,5 @@
 import { Debug } from "./debug";
+import { Entity } from "./entity";
 import { Graphics } from "./graphics";
 import { Input } from "./input";
 import { Physics } from "./physics";
@@ -31,6 +32,12 @@ export class Engine {
 
   public static readonly report = Debug.report;
 
+  public static readonly spawn = Entity.spawn;
+
+  public static readonly destroy = Entity.destroy;
+
+  public static readonly find = Entity.find;
+
   public static readonly primaryController = Input.primaryController;
 
   public static readonly secondaryController = Input.secondaryController;
@@ -38,6 +45,13 @@ export class Engine {
   public static readonly backgroundColor = Graphics.backgroundColor;
 
   public static readonly isPaused = Update.isPaused;
+
+  // schedule
+
+  // todo learn about sequencer in tone.js
+
+  // things i would want to do with a sequencer/scheduler:
+  // - trigger a callback on a time interval that can be cancelled from anywhere, including the callback itself
 
   static {
     Update.beforeEachUpdate(async ({ delta }) => {

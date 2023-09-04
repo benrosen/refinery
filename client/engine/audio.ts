@@ -27,6 +27,21 @@ export class Audio {
     });
   };
 
+  // sequence? schedule?
+  // public static schedule = (
+  //   timeDivision: string,
+  //   callback: () => void,
+  //   limit?: number,
+  // ): void => {
+  //   //
+  // };
+
+  static {
+    Audio.interactionEventNames.forEach((eventName) => {
+      window.addEventListener(eventName, Audio.start, { once: true });
+    });
+  }
+
   private static start = async () => {
     if (Audio._wasStarted.get()) {
       return;
@@ -38,10 +53,4 @@ export class Audio {
 
     Audio._isReady.set(true);
   };
-
-  static {
-    Audio.interactionEventNames.forEach((eventName) => {
-      window.addEventListener(eventName, Audio.start, { once: true });
-    });
-  }
 }

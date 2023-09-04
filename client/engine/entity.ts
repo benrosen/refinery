@@ -9,9 +9,13 @@ export class Entity {
     return Component.getByEntityId(this.id);
   }
 
-  public static create = () => new Entity();
+  public static readonly find = (id: string): Entity => {
+    return new Entity(id);
+  };
 
-  public static readonly delete = (id: string): void => {
+  public static spawn = () => new Entity();
+
+  public static readonly destroy = (id: string): void => {
     Component.deleteByEntityId(id);
   };
 
@@ -31,6 +35,6 @@ export class Entity {
   };
 
   public readonly delete = (): void => {
-    Entity.delete(this.id);
+    Entity.destroy(this.id);
   };
 }

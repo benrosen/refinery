@@ -14,6 +14,8 @@ export class Component<T extends JsonValue = JsonValue> {
     public readonly id: string = randomUUID(),
   ) {
     this._value = new State(this.id, value);
+
+    Component.components.push(this);
   }
 
   public get value(): T {
@@ -43,11 +45,7 @@ export class Component<T extends JsonValue = JsonValue> {
     entityId: string,
     value: T,
   ): Component<T> => {
-    const component = new Component<T>(type, entityId, value);
-
-    Component.components.push(component);
-
-    return component;
+    return new Component<T>(type, entityId, value);
   };
 
   public static readonly delete = (id: string): void => {
