@@ -18,16 +18,20 @@ export class Component<T extends JsonValue = JsonValue> {
     Component.components.push(this);
   }
 
-  public get value(): T {
+  protected get value(): T {
     return this._value.get();
   }
 
-  public set value(value: T) {
+  protected set value(value: T) {
     this._value.set(value);
   }
 
-  public static readonly get = (id: string): Component | undefined => {
-    return Component.components.find((component) => component.id === id);
+  public static readonly get = <T extends Component>(
+    id: string,
+  ): T | undefined => {
+    return Component.components.find((component) => component.id === id) as
+      | T
+      | undefined;
   };
 
   public static readonly getByEntityId = (entityId: string): Component[] => {
@@ -36,8 +40,21 @@ export class Component<T extends JsonValue = JsonValue> {
     );
   };
 
-  public static readonly getByType = (type: string): Component[] => {
-    return Component.components.filter((component) => component.type === type);
+  public static readonly getByType = <T extends Component>(
+    type: string,
+  ): T[] => {
+    return Component.components.filter(
+      (component) => component.type === type,
+    ) as T[];
+  };
+
+  public static readonly getByEntityIdByType = <T extends Component>(
+    entityId: string,
+    type: string,
+  ): T | undefined => {
+    return Component.components.find(
+      (component) => component.entityId === entityId && component.type === type,
+    ) as T | undefined;
   };
 
   public static readonly create = <T extends JsonValue>(
@@ -61,17 +78,13 @@ export class Component<T extends JsonValue = JsonValue> {
   };
 
   public static readonly deleteByEntityId = (entityId: string): void => {
-    const components = Component.components.filter(
-      (component) => component.entityId === entityId,
-    );
+    const components = Component.getByEntityId(entityId);
 
     components.forEach((component) => Component.delete(component.id));
   };
 
   public static readonly deleteByType = (type: string): void => {
-    const components = Component.components.filter(
-      (component) => component.type === type,
-    );
+    const components = Component.getByType(type);
 
     components.forEach((component) => Component.delete(component.id));
   };
@@ -80,25 +93,22 @@ export class Component<T extends JsonValue = JsonValue> {
     entityId: string,
     type: string,
   ): void => {
-    const components = Component.components.filter(
-      (component) => component.entityId === entityId && component.type === type,
-    );
+    const component = Component.getByEntityIdByType(entityId, type);
 
-    components.forEach((component) => Component.delete(component.id));
+    Component.delete(component.id);
   };
 
   public static readonly deleteAll = (): void => {
     Component.components.length = 0;
   };
 
-  public readonly onValueChanged = (
-    // TODO should this callback get the component instead? then it could do component.value
-    callback: (value: T) => void,
-  ): (() => void) => {
-    return this._value.onChanged(callback);
-  };
-
   public readonly delete = (): void => {
     Component.delete(this.id);
+  };
+
+  protected readonly onValueChanged = (
+    callback: (value: { previousValue: T; nextValue: T }) => void,
+  ): (() => void) => {
+    return this._value.onChanged(callback);
   };
 }

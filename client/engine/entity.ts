@@ -37,4 +37,16 @@ export class Entity {
   public readonly delete = (): void => {
     Entity.destroy(this.id);
   };
+
+  public readonly getComponent = <T extends Component>(
+    id: string,
+  ): T | undefined => {
+    return Component.get(id) as T;
+  };
+
+  public readonly getComponentByType = <T extends Component>(
+    type: string,
+  ): T | undefined => {
+    return Component.getByEntityIdByType(this.id, type) as T;
+  };
 }

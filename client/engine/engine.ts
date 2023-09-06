@@ -4,6 +4,7 @@ import { Graphics } from "./graphics";
 import { Input } from "./input";
 import { Physics } from "./physics";
 import { State } from "./state";
+import { System } from "./system";
 import { Topic } from "./topic";
 import { Update } from "./update";
 
@@ -62,6 +63,10 @@ export class Engine {
 
     Update.afterEachUpdate(async () => {
       Graphics.update();
+    });
+
+    Update.duringEachUpdate(async () => {
+      await System.update();
     });
 
     Debug.onLog((value) => {

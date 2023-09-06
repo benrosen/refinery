@@ -37,37 +37,39 @@ export class Axis {
     return `gamepad/${gamepadIndex}/axis/${axisIndex}/value`;
   }
 
-  public onChanged(callback: (value: number) => void): void {
+  public onChanged(
+    callback: (value: { previousValue: number; nextValue: number }) => void,
+  ): void {
     this._value.onChanged(callback);
   }
 
   public onPositive(callback: () => void): void {
-    this._value.onChanged((value) => {
-      if (value > 0 && this.value <= 0) {
+    this._value.onChanged(({ previousValue, nextValue }) => {
+      if (previousValue < 0 && nextValue >= 0) {
         callback();
       }
     });
   }
 
   public onNegative(callback: () => void): void {
-    this._value.onChanged((value) => {
-      if (value < 0 && this.value >= 0) {
+    this._value.onChanged(({ previousValue, nextValue }) => {
+      if (previousValue > 0 && nextValue <= 0) {
         callback();
       }
     });
   }
 
   public onMaximum(callback: () => void): void {
-    this._value.onChanged((value) => {
-      if (value === 1 && this.value !== 1) {
+    this._value.onChanged(({ previousValue, nextValue }) => {
+      if (previousValue === 1 && nextValue !== 1) {
         callback();
       }
     });
   }
 
   public onMinimum(callback: () => void): void {
-    this._value.onChanged((value) => {
-      if (value === -1 && this.value !== -1) {
+    this._value.onChanged(({ previousValue, nextValue }) => {
+      if (previousValue === -1 && nextValue !== -1) {
         callback();
       }
     });

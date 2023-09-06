@@ -23,18 +23,23 @@ export class State<T extends JsonValueOrUndefined> {
     key: string,
     value: T,
   ): T => {
-    const result = Key.set(key, value);
+    const previousValue = State.get(key) as T;
+
+    const nextValue = Key.set(key, value);
 
     const stateChangedTopicName = State.getStateChangedTopicName(key);
 
-    Topic.emit(stateChangedTopicName, result);
+    Topic.emit(stateChangedTopicName, {
+      previousValue,
+      nextValue,
+    });
 
-    return result;
+    return nextValue;
   };
 
   public static onChanged = <T extends JsonValueOrUndefined>(
     key: string,
-    callback: (value: T) => void,
+    callback: (value: { previousValue: T; nextValue: T }) => void,
   ): (() => void) => {
     const stateChangedTopicName = State.getStateChangedTopicName(key);
 
@@ -53,7 +58,9 @@ export class State<T extends JsonValueOrUndefined> {
     return State.set(this.key, value);
   };
 
-  public onChanged = (callback: (value: T) => void): (() => void) => {
+  public onChanged = (
+    callback: (value: { previousValue: T; nextValue: T }) => void,
+  ): (() => void) => {
     return State.onChanged(this.key, callback);
   };
 }

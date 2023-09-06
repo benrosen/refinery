@@ -29,9 +29,15 @@ export class Graphics {
     Graphics.renderer.render(this.scene, this.camera);
   };
 
+  public static readonly getEntityById = (
+    id: string,
+  ): THREE.Object3D | undefined => {
+    throw new Error("Not implemented");
+  };
+
   static {
     Graphics._backgroundColor.onChanged((value) => {
-      Graphics.scene.background = new THREE.Color(value);
+      Graphics.scene.background = new THREE.Color(value.nextValue);
     });
   }
 }
