@@ -57,14 +57,6 @@ export class Component<T extends JsonValue = JsonValue> {
     ) as T | undefined;
   };
 
-  public static readonly create = <T extends JsonValue>(
-    type: string,
-    entityId: string,
-    value: T,
-  ): Component<T> => {
-    return new Component<T>(type, entityId, value);
-  };
-
   public static readonly delete = (id: string): void => {
     const index = Component.components.findIndex(
       (component) => component.id === id,
