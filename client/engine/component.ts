@@ -2,16 +2,17 @@ import { randomUUID } from "crypto";
 import { JsonValue } from "../../shared";
 import { State } from "./state";
 
-export class Component<T extends JsonValue = JsonValue> {
+export abstract class Component<T extends JsonValue = JsonValue> {
   private static readonly components: Component[] = [];
 
   private readonly _value: State<T>;
 
-  constructor(
+  protected constructor(
     public readonly type: string,
     public readonly entityId: string,
     value: T,
     public readonly id: string = randomUUID(),
+    private readonly onDestroyed: () => void = () => {},
   ) {
     this._value = new State(this.id, value);
 
@@ -58,27 +59,21 @@ export class Component<T extends JsonValue = JsonValue> {
   };
 
   public static readonly delete = (id: string): void => {
-    const index = Component.components.findIndex(
-      (component) => component.id === id,
-    );
+    const component = Component.get(id);
 
-    if (index === -1) {
-      return;
-    }
-
-    Component.components.splice(index, 1);
+    component.delete();
   };
 
   public static readonly deleteByEntityId = (entityId: string): void => {
     const components = Component.getByEntityId(entityId);
 
-    components.forEach((component) => Component.delete(component.id));
+    components.forEach((component) => component.delete());
   };
 
   public static readonly deleteByType = (type: string): void => {
     const components = Component.getByType(type);
 
-    components.forEach((component) => Component.delete(component.id));
+    components.forEach((component) => component.delete());
   };
 
   public static readonly deleteByEntityIdAndType = (
@@ -87,15 +82,23 @@ export class Component<T extends JsonValue = JsonValue> {
   ): void => {
     const component = Component.getByEntityIdByType(entityId, type);
 
-    Component.delete(component.id);
-  };
-
-  public static readonly deleteAll = (): void => {
-    Component.components.length = 0;
+    component.delete();
   };
 
   public readonly delete = (): void => {
-    Component.delete(this.id);
+    const index = Component.components.findIndex(
+      (component) => component.id === this.id,
+    );
+
+    if (index === -1) {
+      console.warn(`Component with id ${this.id} not found.`);
+
+      return;
+    }
+
+    Component.components.splice(index, 1);
+
+    this.onDestroyed();
   };
 
   protected readonly onValueChanged = (
