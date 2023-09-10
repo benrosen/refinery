@@ -1,8 +1,10 @@
 import { CollidableComponent } from "./collidable-component";
 import { Entity } from "./entity";
+import { GraphicalComponent } from "./graphical-component";
 import { GravitationalComponent } from "./gravitational-component";
 import { MagneticComponent } from "./magnetic-component";
 import { MassiveComponent } from "./massive-component";
+import { PhysicalComponent } from "./physical-component";
 import { PositionedComponent } from "./positioned-component";
 import { RenderedComponent } from "./rendered-component";
 import { SizedComponent } from "./sized-component";
@@ -12,9 +14,11 @@ export class Box {
   protected readonly entity: Entity;
 
   protected readonly collidableComponent: CollidableComponent;
+  protected readonly graphicalComponent: GraphicalComponent;
   protected readonly gravitationalComponent: GravitationalComponent;
   protected readonly magneticComponent: MagneticComponent;
   protected readonly massiveComponent: MassiveComponent;
+  protected readonly physicalComponent: PhysicalComponent;
   protected readonly positionedComponent: PositionedComponent;
   protected readonly renderedComponent: RenderedComponent;
   protected readonly sizedComponent: SizedComponent;
@@ -58,9 +62,11 @@ export class Box {
     this.entity = new Entity(id);
 
     this.collidableComponent = new CollidableComponent(this.id);
+    this.graphicalComponent = new GraphicalComponent(this.id);
     this.gravitationalComponent = new GravitationalComponent(this.id);
     this.magneticComponent = new MagneticComponent(this.id, polarity);
     this.massiveComponent = new MassiveComponent(this.id, mass);
+    this.physicalComponent = new PhysicalComponent(this.id);
     this.positionedComponent = new PositionedComponent(this.id, x, y, z);
     this.renderedComponent = new RenderedComponent(
       this.id,
