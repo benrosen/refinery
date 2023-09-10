@@ -35,6 +35,14 @@ export class Graphics {
     throw new Error("Not implemented");
   };
 
+  public static readonly createEntity = (id: string): THREE.Object3D => {
+    throw new Error("Not implemented");
+  };
+
+  public static readonly deleteEntity = (id: string): void => {
+    throw new Error("Not implemented");
+  };
+
   static {
     Graphics._backgroundColor.onChanged((value) => {
       Graphics.scene.background = new THREE.Color(value.nextValue);
