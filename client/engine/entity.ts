@@ -1,5 +1,4 @@
 import { randomUUID } from "crypto";
-import { JsonValue } from "../../shared";
 import { Component } from "./component";
 
 export class Entity {
@@ -17,13 +16,6 @@ export class Entity {
 
   public static readonly destroy = (id: string): void => {
     Component.deleteByEntityId(id);
-  };
-
-  public readonly createComponent = <T extends JsonValue>(
-    type: string,
-    value: T,
-  ): Component<T> => {
-    return Component.create(type, this.id, value);
   };
 
   public readonly deleteComponent = (id: string): void => {
