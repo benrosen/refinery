@@ -5,9 +5,15 @@ import { Component } from "./component";
 export class System<T extends JsonValue = JsonValue> {
   private static readonly systems: System[] = [];
 
+  private previousComponents: Component<T>[] = [];
+
   constructor(
     public readonly type: string,
-    private readonly onUpdate: (component: Component<T>) => Promise<void>,
+    private readonly onComponentsUpdated?: (
+      components: Component<T>[],
+    ) => Promise<void>,
+    private readonly onComponentsAdded?: (components: Component<T>[]) => void,
+    private readonly onComponentsRemoved?: (components: Component<T>[]) => void,
     public readonly id: string = randomUUID(),
   ) {
     System.systems.push(this);
@@ -15,12 +21,10 @@ export class System<T extends JsonValue = JsonValue> {
 
   public static readonly update = async (): Promise<void> => {
     await Promise.all(
-      System.systems.flatMap((system) => {
+      System.systems.map((system) => {
         const components = Component.getByType(system.type);
 
-        return components.map((component) => {
-          return system.onUpdate(component);
-        });
+        system.update(components);
       }),
     );
   };
@@ -35,9 +39,16 @@ export class System<T extends JsonValue = JsonValue> {
 
   public static readonly create = <T extends JsonValue>(
     type: string,
-    onUpdate: (component: Component<T>) => Promise<void>,
+    onUpdate?: (components: Component<T>[]) => Promise<void>,
+    onComponentsAdded?: (components: Component<T>[]) => void,
+    onComponentsRemoved?: (components: Component<T>[]) => void,
   ): System<T> => {
-    return new System<T>(type, onUpdate);
+    return new System<T>(
+      type,
+      onUpdate,
+      onComponentsAdded,
+      onComponentsRemoved,
+    );
   };
 
   public static readonly delete = (id: string): void => {
@@ -60,8 +71,28 @@ export class System<T extends JsonValue = JsonValue> {
     System.systems.length = 0;
   };
 
-  public readonly update = async (component: Component<T>) => {
-    await this.onUpdate(component);
+  public readonly update = async (components: Component<T>[]) => {
+    const componentsToAdd = components.filter(
+      (component) => !this.previousComponents.includes(component),
+    );
+
+    const componentsToRemove = this.previousComponents.filter(
+      (component) => !components.includes(component),
+    );
+
+    if (this.onComponentsUpdated) {
+      await this.onComponentsUpdated(components);
+    }
+
+    if (this.onComponentsAdded) {
+      this.onComponentsAdded(componentsToAdd);
+    }
+
+    if (this.onComponentsRemoved) {
+      this.onComponentsRemoved(componentsToRemove);
+    }
+
+    this.previousComponents = components;
   };
 
   public readonly delete = (): void => {

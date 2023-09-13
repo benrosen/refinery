@@ -14,9 +14,6 @@ export class PhysicalComponent extends Component<Physical> {
         isPhysical: true,
       },
       id,
-      () => {
-        Physics.deleteEntity(entityId);
-      },
     );
 
     Physics.createEntity(entityId);

@@ -14,9 +14,6 @@ export class GraphicalComponent extends Component<Graphical> {
         isGraphical: true,
       },
       id,
-      () => {
-        Graphics.deleteEntity(entityId);
-      },
     );
 
     Graphics.createEntity(entityId);

@@ -12,7 +12,6 @@ export abstract class Component<T extends JsonValue = JsonValue> {
     public readonly entityId: string,
     value: T,
     public readonly id: string = randomUUID(),
-    private readonly onDestroyed: () => void = () => {},
   ) {
     this._value = new State(this.id, value);
 
@@ -97,8 +96,6 @@ export abstract class Component<T extends JsonValue = JsonValue> {
     }
 
     Component.components.splice(index, 1);
-
-    this.onDestroyed();
   };
 
   protected readonly onValueChanged = (
