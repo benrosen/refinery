@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { v4 as createUuid } from "uuid";
 import { JsonValue } from "../../shared";
 import { State } from "./state";
 
@@ -11,7 +11,7 @@ export abstract class Component<T extends JsonValue = JsonValue> {
     public readonly type: string,
     public readonly entityId: string,
     value: T,
-    public readonly id: string = randomUUID(),
+    public readonly id: string = createUuid(),
   ) {
     this._value = new State(this.id, value);
 

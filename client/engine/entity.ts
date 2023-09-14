@@ -1,8 +1,8 @@
-import { randomUUID } from "crypto";
+import { v4 as createUuid } from "uuid";
 import { Component } from "./component";
 
 export class Entity {
-  constructor(public readonly id: string = randomUUID()) {}
+  constructor(public readonly id: string = createUuid()) {}
 
   public get components(): Component[] {
     return Component.getByEntityId(this.id);

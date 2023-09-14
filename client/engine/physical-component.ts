@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { v4 as createUuid } from "uuid";
 import { Component } from "./component";
 import { Physical } from "./physical";
 import { Physics } from "./physics";
@@ -6,7 +6,7 @@ import { Physics } from "./physics";
 export class PhysicalComponent extends Component<Physical> {
   public static readonly type = "physical";
 
-  constructor(entityId: string, id: string = randomUUID()) {
+  constructor(entityId: string, id: string = createUuid()) {
     super(
       PhysicalComponent.type,
       entityId,

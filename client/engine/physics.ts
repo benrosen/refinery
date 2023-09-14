@@ -1,5 +1,5 @@
 import * as CANNON from "cannon-es";
-import { randomUUID } from "crypto";
+import { v4 as createUuid } from "uuid";
 
 export class Physics {
   public static readonly world = new CANNON.World();
@@ -11,7 +11,7 @@ export class Physics {
   };
 
   public static readonly createEntity = (
-    entityId: string = randomUUID(),
+    entityId: string = createUuid(),
   ): CANNON.Body => {
     throw new Error("Not implemented");
   };

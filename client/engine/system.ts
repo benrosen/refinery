@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { v4 as createUuid } from "uuid";
 import { JsonValue } from "../../shared";
 import { Component } from "./component";
 
@@ -14,7 +14,7 @@ export class System<T extends JsonValue = JsonValue> {
     ) => Promise<void>,
     private readonly onComponentsAdded?: (components: Component<T>[]) => void,
     private readonly onComponentsRemoved?: (components: Component<T>[]) => void,
-    public readonly id: string = randomUUID(),
+    public readonly id: string = createUuid(),
   ) {
     System.systems.push(this);
   }
