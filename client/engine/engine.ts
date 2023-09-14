@@ -43,9 +43,17 @@ export class Engine {
 
   public static readonly secondaryController = Input.secondaryController;
 
-  public static readonly backgroundColor = Graphics.backgroundColor;
+  public static get backgroundColor(): string {
+    return Graphics.backgroundColor;
+  }
 
-  public static readonly isPaused = Update.isPaused;
+  public static set backgroundColor(value: string) {
+    Graphics.backgroundColor = value;
+  }
+
+  public static get isPaused(): boolean {
+    return Update.isPaused;
+  }
 
   // schedule
 
