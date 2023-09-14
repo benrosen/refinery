@@ -10,7 +10,7 @@ export class Debug {
     return Topic.on(`report`, callback);
   };
 
-  public static readonly log = (topic: string, value?: JsonValue) => {
+  public static readonly log = (value: JsonValue) => {
     Topic.emit(`log`, value);
   };
 
