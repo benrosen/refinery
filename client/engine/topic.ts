@@ -1,7 +1,7 @@
 import { JsonValueOrUndefined } from "../../shared";
 
 export class Topic<T extends JsonValueOrUndefined> {
-  private static TARGET = new EventTarget();
+  private static readonly target = new EventTarget();
 
   constructor(private readonly topic: string) {}
 
@@ -9,7 +9,7 @@ export class Topic<T extends JsonValueOrUndefined> {
     topic: string,
     value?: T,
   ): T => {
-    Topic.TARGET.dispatchEvent(new CustomEvent(topic, { detail: value }));
+    Topic.target.dispatchEvent(new CustomEvent(topic, { detail: value }));
 
     return value;
   };
@@ -22,10 +22,10 @@ export class Topic<T extends JsonValueOrUndefined> {
       callback(event.detail);
     };
 
-    Topic.TARGET.addEventListener(topic, handler);
+    Topic.target.addEventListener(topic, handler);
 
     return () => {
-      Topic.TARGET.removeEventListener(topic, handler);
+      Topic.target.removeEventListener(topic, handler);
     };
   };
 
