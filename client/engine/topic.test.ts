@@ -1,68 +1,150 @@
 import { v4 as createUuid } from "uuid";
 import { Topic } from "./topic";
 
-describe("The Topic class allows you to", () => {
-  describe("publish an event to multiple subscribers via", () => {
-    test("an instance method.", () => {
-      const testTopicName = createUuid();
+describe("The Topic class", () => {
+  describe("instance", () => {
+    describe("emit function", () => {
+      it("should emit a value to the topic", () => {
+        const testTopicId = createUuid();
 
-      const testTopic = new Topic(testTopicName);
+        const testValue = createUuid();
 
-      const testValue = createUuid();
+        const topic = new Topic(testTopicId);
 
-      const testCallbacks = [jest.fn(), jest.fn(), jest.fn()];
+        const testCallback = jest.fn();
 
-      const testUnsubscribes = testCallbacks.map((testCallback) => {
-        return testTopic.on(testCallback);
-      });
+        topic.on(testCallback);
 
-      testTopic.emit(testValue);
+        expect(testCallback).not.toHaveBeenCalled();
 
-      testCallbacks.forEach((testCallback) => {
+        topic.emit(testValue);
+
         expect(testCallback).toHaveBeenCalledWith(testValue);
       });
 
-      testUnsubscribes.forEach((testUnsubscribe) => {
-        testUnsubscribe();
-      });
+      it("should return the value that was emitted", () => {
+        const testTopicId = createUuid();
 
-      const postUnsubscribeTestValue = createUuid();
+        const testValue = createUuid();
 
-      testTopic.emit(postUnsubscribeTestValue);
+        const topic = new Topic(testTopicId);
 
-      testCallbacks.forEach((testCallback) => {
-        expect(testCallback).not.toHaveBeenCalledWith(postUnsubscribeTestValue);
+        const returnedValue = topic.emit(testValue);
+
+        expect(returnedValue).toStrictEqual(testValue);
       });
     });
 
-    test("a static method.", () => {
-      const testTopicName = createUuid();
+    describe("on function", () => {
+      it("should call the callback with the value that was emitted to the topic", () => {
+        const testTopicId = createUuid();
 
-      const testValue = createUuid();
+        const testValue = createUuid();
 
-      const testCallbacks = [jest.fn(), jest.fn(), jest.fn()];
+        const topic = new Topic(testTopicId);
 
-      const testUnsubscribes = testCallbacks.map((testCallback) => {
-        return Topic.on(testTopicName, testCallback);
-      });
+        const testCallback = jest.fn();
 
-      Topic.emit(testTopicName, testValue);
+        topic.on(testCallback);
 
-      testCallbacks.forEach((testCallback) => {
+        expect(testCallback).not.toHaveBeenCalled();
+
+        topic.emit(testValue);
+
         expect(testCallback).toHaveBeenCalledWith(testValue);
       });
 
-      testUnsubscribes.forEach((testUnsubscribe) => {
-        testUnsubscribe();
+      it("should not call the callback after the returned function is called", () => {
+        const testTopicId = createUuid();
+
+        const testValue = createUuid();
+
+        const topic = new Topic(testTopicId);
+
+        const testCallback = jest.fn();
+
+        const off = topic.on(testCallback);
+
+        expect(testCallback).not.toHaveBeenCalled();
+
+        topic.emit(testValue);
+
+        expect(testCallback).toHaveBeenCalledWith(testValue);
+
+        off();
+
+        topic.emit(testValue);
+
+        expect(testCallback).toHaveBeenCalledTimes(1);
       });
+    });
+  });
 
-      const postUnsubscribeTestValue = createUuid();
+  describe("static emit method", () => {
+    it("should emit a value to the topic", () => {
+      const testTopicId = createUuid();
 
-      Topic.emit(testTopicName, postUnsubscribeTestValue);
+      const testValue = createUuid();
 
-      testCallbacks.forEach((testCallback) => {
-        expect(testCallback).not.toHaveBeenCalledWith(postUnsubscribeTestValue);
-      });
+      const testCallback = jest.fn();
+
+      Topic.on(testTopicId, testCallback);
+
+      expect(testCallback).not.toHaveBeenCalled();
+
+      Topic.emit(testTopicId, testValue);
+
+      expect(testCallback).toHaveBeenCalledWith(testValue);
+    });
+
+    it("should return the value that was emitted", () => {
+      const testTopicId = createUuid();
+
+      const testValue = createUuid();
+
+      const returnedValue = Topic.emit(testTopicId, testValue);
+
+      expect(returnedValue).toStrictEqual(testValue);
+    });
+  });
+
+  describe("static on method", () => {
+    it("should call the callback with the value that was emitted to the topic", () => {
+      const testTopicId = createUuid();
+
+      const testValue = createUuid();
+
+      const testCallback = jest.fn();
+
+      Topic.on(testTopicId, testCallback);
+
+      expect(testCallback).not.toHaveBeenCalled();
+
+      Topic.emit(testTopicId, testValue);
+
+      expect(testCallback).toHaveBeenCalledWith(testValue);
+    });
+
+    it("should not call the callback after the returned function is called", () => {
+      const testTopicId = createUuid();
+
+      const testValue = createUuid();
+
+      const testCallback = jest.fn();
+
+      const off = Topic.on(testTopicId, testCallback);
+
+      expect(testCallback).not.toHaveBeenCalled();
+
+      Topic.emit(testTopicId, testValue);
+
+      expect(testCallback).toHaveBeenCalledWith(testValue);
+
+      off();
+
+      Topic.emit(testTopicId, testValue);
+
+      expect(testCallback).toHaveBeenCalledTimes(1);
     });
   });
 });
