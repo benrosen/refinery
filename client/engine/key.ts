@@ -48,9 +48,6 @@ export class Key<T extends JsonValueOrUndefined> {
    *
    * @example Set a "name" value.
    * Key.set("name", "John"); // Set the "name" key to "John".
-   *
-   * @example Set a "score" value.
-   * Key.set("score", 1); // Set the "score" key to 1.
    */
   public static set = <T extends JsonValueOrUndefined>(
     key: string,
