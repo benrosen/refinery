@@ -1,11 +1,8 @@
 import { State } from "./state";
 
-interface Frame {
-  index: number;
-  timestamp: number;
-  delta: number | undefined;
-}
-
+/**
+ * The Update class provides a way to update the game.
+ */
 export class Update {
   private static readonly _isPaused = new State<boolean>("is-paused", false);
 
