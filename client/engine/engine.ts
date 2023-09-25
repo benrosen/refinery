@@ -9,71 +9,66 @@ import { Topic } from "./topic";
 import { Update } from "./update";
 
 export class Engine {
-  public static readonly get = State.get;
+  public readonly get = State.get;
 
-  public static readonly set = State.set;
+  public readonly set = State.set;
 
-  public static readonly emit = Topic.emit;
+  public readonly emit = Topic.emit;
 
-  public static readonly on = Topic.on;
+  public readonly on = Topic.on;
 
-  public static readonly onChanged = State.onChanged;
+  public readonly onChanged = State.onChanged;
 
-  public static readonly duringEachUpdate = Update.duringEachUpdate;
+  public readonly duringEachUpdate: Update["duringEachUpdate"];
 
-  public static readonly pause = Update.pause;
+  public readonly pause: Update["pause"];
 
-  public static readonly resume = Update.resume;
+  public readonly resume: Update["resume"];
 
-  public static readonly onPaused = Update.onPaused;
+  public readonly onPaused: Update["onPaused"];
 
-  public static readonly onResumed = Update.onResumed;
+  public readonly onResumed: Update["onResumed"];
 
-  public static readonly log = Debug.log;
+  public readonly log = Debug.log;
 
-  public static readonly report = Debug.report;
+  public readonly report = Debug.report;
 
-  public static readonly spawn = Entity.spawn;
+  public readonly spawn = Entity.spawn;
 
-  public static readonly destroy = Entity.destroy;
+  public readonly destroy = Entity.destroy;
 
-  public static readonly find = Entity.find;
+  public readonly find = Entity.find;
 
-  public static readonly primaryController = Input.primaryController;
+  public readonly primaryController = Input.primaryController;
 
-  public static readonly secondaryController = Input.secondaryController;
+  public readonly secondaryController = Input.secondaryController;
+  public readonly start: () => void;
+  private readonly update: Update;
 
-  public static get backgroundColor(): string {
-    return Graphics.backgroundColor;
-  }
+  constructor() {
+    this.update = new Update();
 
-  public static set backgroundColor(value: string) {
-    Graphics.backgroundColor = value;
-  }
+    this.duringEachUpdate = this.update.duringEachUpdate;
 
-  public static get isPaused(): boolean {
-    return Update.isPaused;
-  }
+    this.pause = this.update.pause;
 
-  // schedule
+    this.resume = this.update.resume;
 
-  // todo learn about sequencer in tone.js
+    this.onPaused = this.update.onPaused;
 
-  // things i would want to do with a sequencer/scheduler:
-  // - trigger a callback on a time interval that can be cancelled from anywhere, including the callback itself
+    this.onResumed = this.update.onResumed;
 
-  static {
-    Update.beforeEachUpdate(async ({ delta }) => {
+    this.update.beforeEachUpdate(async ({ delta }) => {
       Input.update();
 
       Physics.update(delta);
     });
 
-    Update.afterEachUpdate(async () => {
+    this.update.afterEachUpdate(async () => {
       Graphics.update();
     });
 
-    Update.duringEachUpdate(async () => {
+    this.update.duringEachUpdate(async () => {
       await System.update();
     });
 
@@ -84,5 +79,28 @@ export class Engine {
     Debug.onReport((report) => {
       console.error(report);
     });
+
+    this.start = () => {
+      return this.update.update();
+    };
+  }
+
+  public get backgroundColor(): string {
+    return Graphics.backgroundColor;
+  }
+
+  public set backgroundColor(value: string) {
+    Graphics.backgroundColor = value;
+  }
+
+  // schedule
+
+  // todo learn about sequencer in tone.js
+
+  // things i would want to do with a sequencer/scheduler:
+  // - trigger a callback on a time interval that can be cancelled from anywhere, including the callback itself
+
+  public get isPaused(): boolean {
+    return this.update.isPaused;
   }
 }

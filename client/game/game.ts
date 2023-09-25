@@ -1,7 +1,11 @@
 import { Engine } from "../engine";
 
 export class Game {
-  static {
-    Engine.log("👋 Welcome to the game!");
+  protected readonly engine = new Engine();
+
+  constructor() {
+    this.engine.start();
+
+    this.engine.log("👋 Welcome to the game!");
   }
 }

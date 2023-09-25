@@ -5,29 +5,29 @@ import { State } from "./state";
  * The Update class provides a way to update the game.
  */
 export class Update {
-  private static readonly _isPaused = new State<boolean>("is-paused", false);
+  private readonly _isPaused = new State<boolean>("is-paused", false);
 
-  private static readonly frameCount = new State<number>("frame-count", 0);
+  private readonly frameCount = new State<number>("frame-count", 0);
 
-  private static readonly timestamp = new State<number>("timestamp");
+  private readonly timestamp = new State<number>("timestamp");
 
-  private static readonly beforeEachUpdateHandlers = new Set<
+  private readonly beforeEachUpdateHandlers = new Set<
     (frame: Frame) => Promise<void>
   >();
 
-  private static readonly duringEachUpdateHandlers = new Set<
+  private readonly duringEachUpdateHandlers = new Set<
     (frame: Frame) => Promise<void>
   >();
 
-  private static readonly afterEachUpdateHandlers = new Set<
+  private readonly afterEachUpdateHandlers = new Set<
     (frame: Frame) => Promise<void>
   >();
 
   /**
    * Whether the game is paused.
    */
-  public static get isPaused() {
-    return Update._isPaused.get();
+  public get isPaused() {
+    return this._isPaused.get();
   }
 
   /**
@@ -37,8 +37,8 @@ export class Update {
    *
    * @returns A function that removes the callback function from the paused event.
    */
-  public static onPaused = (callback: () => void) => {
-    return Update._isPaused.onChanged((value) => {
+  public onPaused = (callback: () => void) => {
+    return this._isPaused.onChanged((value) => {
       if (value) {
         callback();
       }
@@ -52,9 +52,11 @@ export class Update {
    *
    * @returns A function that removes the callback function from the resumed event.
    */
-  public static onResumed = (callback: () => void) => {
-    return Update._isPaused.onChanged((value) => {
-      if (!value) {
+  public onResumed = (callback: () => void) => {
+    return this._isPaused.onChanged(({ previousValue, nextValue }) => {
+      const wasResumed = previousValue === true && nextValue === false;
+
+      if (wasResumed) {
         callback();
       }
     });
@@ -63,15 +65,15 @@ export class Update {
   /**
    * Pause the game.
    */
-  public static pause = () => {
-    Update._isPaused.set(true);
+  public pause = () => {
+    this._isPaused.set(true);
   };
 
   /**
    * Resume the game.
    */
-  public static resume = () => {
-    Update._isPaused.set(false);
+  public resume = () => {
+    this._isPaused.set(false);
   };
 
   /**
@@ -86,13 +88,11 @@ export class Update {
    *   console.log(frame);
    * });
    */
-  public static beforeEachUpdate = (
-    handler: (frame: Frame) => Promise<void>,
-  ) => {
-    Update.beforeEachUpdateHandlers.add(handler);
+  public beforeEachUpdate = (handler: (frame: Frame) => Promise<void>) => {
+    this.beforeEachUpdateHandlers.add(handler);
 
     return () => {
-      Update.beforeEachUpdateHandlers.delete(handler);
+      this.beforeEachUpdateHandlers.delete(handler);
     };
   };
 
@@ -108,13 +108,11 @@ export class Update {
    *     console.log(frame);
    * })
    */
-  public static duringEachUpdate = (
-    handler: (frame: Frame) => Promise<void>,
-  ) => {
-    Update.duringEachUpdateHandlers.add(handler);
+  public duringEachUpdate = (handler: (frame: Frame) => Promise<void>) => {
+    this.duringEachUpdateHandlers.add(handler);
 
     return () => {
-      Update.duringEachUpdateHandlers.delete(handler);
+      this.duringEachUpdateHandlers.delete(handler);
     };
   };
 
@@ -130,13 +128,11 @@ export class Update {
    *     console.log(frame);
    * })
    */
-  public static afterEachUpdate = (
-    handler: (frame: Frame) => Promise<void>,
-  ) => {
-    Update.afterEachUpdateHandlers.add(handler);
+  public afterEachUpdate = (handler: (frame: Frame) => Promise<void>) => {
+    this.afterEachUpdateHandlers.add(handler);
 
     return () => {
-      Update.afterEachUpdateHandlers.delete(handler);
+      this.afterEachUpdateHandlers.delete(handler);
     };
   };
 
@@ -145,21 +141,21 @@ export class Update {
    *
    * @private
    */
-  private static update = async () => {
-    const frameCount = Update.frameCount.get();
+  public update = async () => {
+    const frameCount = this.frameCount.get();
 
-    const timestamp = Update.timestamp.get();
+    const timestamp = this.timestamp.get();
 
     const nextFrameCount = frameCount + 1;
 
     const nextTimestamp = Date.now();
 
-    Update.frameCount.set(nextFrameCount);
+    this.frameCount.set(nextFrameCount);
 
-    Update.timestamp.set(nextTimestamp);
+    this.timestamp.set(nextTimestamp);
 
-    if (Update.isPaused) {
-      requestAnimationFrame(Update.update);
+    if (this.isPaused) {
+      requestAnimationFrame(this.update);
 
       return;
     }
@@ -170,33 +166,34 @@ export class Update {
       delta: timestamp ? nextTimestamp - timestamp : undefined,
     };
 
+    console.log(`starting updates for frame ${nextFrame}`);
+
     await Promise.all(
-      Array.from(Update.beforeEachUpdateHandlers).map((handler) => {
+      Array.from(this.beforeEachUpdateHandlers).map((handler, index) => {
+        console.log(`executing beforeEachUpdateHandler ${index}`);
+
         return handler(nextFrame);
       }),
     );
 
     await Promise.all(
-      Array.from(Update.duringEachUpdateHandlers).map((handler) => {
+      Array.from(this.duringEachUpdateHandlers).map((handler, index) => {
+        console.log(`executing duringEachUpdateHandler ${index}`);
+
         return handler(nextFrame);
       }),
     );
 
     await Promise.all(
-      Array.from(Update.afterEachUpdateHandlers).map((handler) => {
+      Array.from(this.afterEachUpdateHandlers).map((handler, index) => {
+        console.log(`executing afterEachUpdateHandler ${index}`);
+
         return handler(nextFrame);
       }),
     );
 
-    requestAnimationFrame(Update.update);
+    console.log(`update complete`);
+
+    requestAnimationFrame(this.update);
   };
-
-  /**
-   * Initialize the update loop.
-   */
-  static {
-    (async () => {
-      await Update.update();
-    })();
-  }
 }
