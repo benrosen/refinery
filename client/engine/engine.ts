@@ -39,14 +39,20 @@ export class Engine {
 
   public readonly find = Entity.find;
 
-  public readonly primaryController = Input.primaryController;
+  public readonly primaryController: Input["primaryController"];
 
-  public readonly secondaryController = Input.secondaryController;
+  public readonly secondaryController: Input["secondaryController"];
+
   public readonly start: () => void;
+
   private readonly update: Update;
+
+  private readonly input: Input;
 
   constructor() {
     this.update = new Update();
+
+    this.input = new Input();
 
     this.duringEachUpdate = this.update.duringEachUpdate;
 
@@ -59,7 +65,7 @@ export class Engine {
     this.onResumed = this.update.onResumed;
 
     this.update.beforeEachUpdate(async ({ delta }) => {
-      Input.update();
+      this.input.update();
 
       Physics.update(delta);
     });

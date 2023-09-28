@@ -1,17 +1,28 @@
 import { Controller } from "./controller";
+import { getGamepads } from "./get-gamepads";
 import { Topic } from "./topic";
 
 export class Input {
-  public static readonly primaryController = new Controller(0);
+  public readonly primaryController = new Controller(0);
 
-  public static readonly secondaryController = new Controller(1);
+  public readonly secondaryController = new Controller(1);
 
-  private static gamepads = navigator.getGamepads();
+  private gamepads = getGamepads();
 
-  public static update = () => {
-    const nextGamepads = navigator.getGamepads();
+  constructor() {
+    window.addEventListener("gamepadconnected", (event) => {
+      Topic.emit("GamepadConnected", event.gamepad.index);
+    });
 
-    Input.gamepads.forEach((gamepad) => {
+    window.addEventListener("gamepaddisconnected", (event) => {
+      Topic.emit("GamepadDisconnected", event.gamepad.index);
+    });
+  }
+
+  public update = () => {
+    const nextGamepads = getGamepads();
+
+    this.gamepads.forEach((gamepad) => {
       if (gamepad === null) {
         return;
       }
@@ -47,16 +58,6 @@ export class Input {
       });
     });
 
-    Input.gamepads = nextGamepads;
+    this.gamepads = nextGamepads;
   };
-
-  static {
-    window.addEventListener("gamepadconnected", (event) => {
-      Topic.emit("GamepadConnected", event.gamepad.index);
-    });
-
-    window.addEventListener("gamepaddisconnected", (event) => {
-      Topic.emit("GamepadDisconnected", event.gamepad.index);
-    });
-  }
 }
