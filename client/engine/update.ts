@@ -166,33 +166,23 @@ export class Update {
       delta: timestamp ? nextTimestamp - timestamp : undefined,
     };
 
-    console.log(`starting updates for frame ${nextFrame}`);
-
     await Promise.all(
       Array.from(this.beforeEachUpdateHandlers).map((handler, index) => {
-        console.log(`executing beforeEachUpdateHandler ${index}`);
-
         return handler(nextFrame);
       }),
     );
 
     await Promise.all(
       Array.from(this.duringEachUpdateHandlers).map((handler, index) => {
-        console.log(`executing duringEachUpdateHandler ${index}`);
-
         return handler(nextFrame);
       }),
     );
 
     await Promise.all(
       Array.from(this.afterEachUpdateHandlers).map((handler, index) => {
-        console.log(`executing afterEachUpdateHandler ${index}`);
-
         return handler(nextFrame);
       }),
     );
-
-    console.log(`update complete`);
 
     requestAnimationFrame(this.update);
   };
