@@ -52,16 +52,16 @@ export class Button {
   };
 
   public onPressed = (callback: () => void): (() => void) => {
-    return this._isPressed.onChanged((isPressed) => {
-      if (isPressed) {
+    return this._isPressed.onChanged(({ previousValue, nextValue }) => {
+      if (!previousValue && nextValue) {
         callback();
       }
     });
   };
 
   public onReleased = (callback: () => void): (() => void) => {
-    return this._isPressed.onChanged((isPressed) => {
-      if (!isPressed) {
+    return this._isPressed.onChanged(({ previousValue, nextValue }) => {
+      if (previousValue && !nextValue) {
         callback();
       }
     });
