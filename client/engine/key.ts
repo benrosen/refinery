@@ -35,7 +35,13 @@ export class Key<T extends JsonValueOrUndefined> {
     key: string,
     defaultValue?: T,
   ): T => {
-    return (Key.store.get(key) as T) || defaultValue;
+    const value = Key.store.get(key) as T;
+
+    if (value === undefined) {
+      return defaultValue;
+    }
+
+    return value;
   };
 
   /**
