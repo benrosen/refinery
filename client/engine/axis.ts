@@ -39,37 +39,37 @@ export class Axis {
 
   public onChanged(
     callback: (value: { previousValue: number; nextValue: number }) => void,
-  ): void {
-    this._value.onChanged(callback);
+  ): () => void {
+    return this._value.onChanged(callback);
   }
 
-  public onPositive(callback: () => void): void {
-    this._value.onChanged(({ previousValue, nextValue }) => {
+  public onPositive(callback: () => void): () => void {
+    return this._value.onChanged(({ previousValue, nextValue }) => {
       if (previousValue < 0 && nextValue >= 0) {
         callback();
       }
     });
   }
 
-  public onNegative(callback: () => void): void {
-    this._value.onChanged(({ previousValue, nextValue }) => {
+  public onNegative(callback: () => void): () => void {
+    return this._value.onChanged(({ previousValue, nextValue }) => {
       if (previousValue > 0 && nextValue <= 0) {
         callback();
       }
     });
   }
 
-  public onMaximum(callback: () => void): void {
-    this._value.onChanged(({ previousValue, nextValue }) => {
-      if (previousValue === 1 && nextValue !== 1) {
+  public onMaximum(callback: () => void): () => void {
+    return this._value.onChanged(({ previousValue, nextValue }) => {
+      if (previousValue !== 1 && nextValue === 1) {
         callback();
       }
     });
   }
 
-  public onMinimum(callback: () => void): void {
-    this._value.onChanged(({ previousValue, nextValue }) => {
-      if (previousValue === -1 && nextValue !== -1) {
+  public onMinimum(callback: () => void): () => void {
+    return this._value.onChanged(({ previousValue, nextValue }) => {
+      if (previousValue !== -1 && nextValue === -1) {
         callback();
       }
     });
