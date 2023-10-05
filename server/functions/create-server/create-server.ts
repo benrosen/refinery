@@ -37,6 +37,11 @@ export const createServer = (
 
   expressApplication.use(express.static(path));
 
+  expressApplication.get("/status", (req, res) => {
+    const uptime = process.uptime();
+    res.json({ uptime });
+  });
+
   let server: Server["expressServer"];
 
   return {
