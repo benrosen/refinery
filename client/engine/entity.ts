@@ -8,11 +8,19 @@ export class Entity {
     return Component.getByEntityId(this.id);
   }
 
-  public static readonly find = (id: string): Entity => {
+  public static readonly select = (id: string) => {
     return new Entity(id);
   };
 
-  public static spawn = () => new Entity();
+  public static readonly selectAll = (): Entity[] => {
+    const allComponents = Component.getAll();
+
+    const allEntityIds = allComponents.map((component) => component.entityId);
+
+    const uniqueEntityIds = [...new Set(allEntityIds)];
+
+    return uniqueEntityIds.map((entityId) => new Entity(entityId));
+  };
 
   public static readonly destroy = (id: string): void => {
     Component.deleteByEntityId(id);
@@ -30,15 +38,9 @@ export class Entity {
     Entity.destroy(this.id);
   };
 
-  public readonly getComponent = <T extends Component>(
-    id: string,
-  ): T | undefined => {
-    return Component.get(id) as T;
-  };
-
-  public readonly getComponentByType = <T extends Component>(
+  public readonly getComponentsByType = <T extends Component>(
     type: string,
-  ): T | undefined => {
-    return Component.getByEntityIdByType(this.id, type) as T;
+  ): T[] => {
+    return Component.getByEntityIdByType(this.id, type);
   };
 }

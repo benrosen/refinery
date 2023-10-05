@@ -1,5 +1,8 @@
 import * as CANNON from "cannon-es";
 import { v4 as createUuid } from "uuid";
+import { Physical } from "./physical";
+import { PhysicalComponent } from "./physical-component";
+import { System } from "./system";
 
 export class Physics {
   public static readonly world = new CANNON.World();
@@ -23,4 +26,21 @@ export class Physics {
   public static readonly update = (delta: number) => {
     this.world.step(1 / 60, delta);
   };
+
+  static {
+    new System<Physical>(
+      PhysicalComponent.type,
+      undefined,
+      (components) => {
+        components.forEach((component) => {
+          Physics.createEntity(component.entityId);
+        });
+      },
+      (components) => {
+        components.forEach((component) => {
+          Physics.deleteEntity(component.entityId);
+        });
+      },
+    );
+  }
 }

@@ -1,5 +1,8 @@
 import * as THREE from "three";
+import { Graphical } from "./graphical";
+import { GraphicalComponent } from "./graphical-component";
 import { State } from "./state";
+import { System } from "./system";
 
 export class Graphics {
   private static readonly scene = new THREE.Scene();
@@ -44,8 +47,24 @@ export class Graphics {
   };
 
   static {
+    // TODO should this be a component?
     Graphics._backgroundColor.onChanged((value) => {
       Graphics.scene.background = new THREE.Color(value.nextValue);
     });
+
+    new System<Graphical>(
+      GraphicalComponent.type,
+      undefined,
+      (components) => {
+        components.forEach((component) => {
+          Graphics.createEntity(component.entityId);
+        });
+      },
+      (components) => {
+        components.forEach((component) => {
+          Graphics.deleteEntity(component.entityId);
+        });
+      },
+    );
   }
 }

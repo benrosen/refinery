@@ -33,11 +33,11 @@ export class Engine {
 
   public readonly report = Debug.report;
 
-  public readonly spawn = Entity.spawn;
+  public readonly select = Entity.select;
+
+  public readonly selectAll = Entity.selectAll;
 
   public readonly destroy = Entity.destroy;
-
-  public readonly find = Entity.find;
 
   public readonly primaryController: Input["primaryController"];
 

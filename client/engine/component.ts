@@ -34,6 +34,10 @@ export abstract class Component<T extends JsonValue = JsonValue> {
       | undefined;
   };
 
+  public static readonly getAll = (): Component[] => {
+    return Component.components;
+  };
+
   public static readonly getByEntityId = (entityId: string): Component[] => {
     return Component.components.filter(
       (component) => component.entityId === entityId,
@@ -51,10 +55,10 @@ export abstract class Component<T extends JsonValue = JsonValue> {
   public static readonly getByEntityIdByType = <T extends Component>(
     entityId: string,
     type: string,
-  ): T | undefined => {
-    return Component.components.find(
+  ): T[] => {
+    return Component.components.filter(
       (component) => component.entityId === entityId && component.type === type,
-    ) as T | undefined;
+    ) as T[];
   };
 
   public static readonly delete = (id: string): void => {
@@ -79,9 +83,9 @@ export abstract class Component<T extends JsonValue = JsonValue> {
     entityId: string,
     type: string,
   ): void => {
-    const component = Component.getByEntityIdByType(entityId, type);
+    const components = Component.getByEntityIdByType(entityId, type);
 
-    component.delete();
+    components.forEach((component) => component.delete());
   };
 
   public readonly delete = (): void => {

@@ -12,9 +12,11 @@ new System<Positioned>(
     components.forEach(({ x, y, z, entityId }: PositionedComponent) => {
       const entity = new Entity(entityId);
 
-      const massiveComponent = entity.getComponentByType(
+      const massiveComponents = entity.getComponentsByType<MassiveComponent>(
         MassiveComponent.type,
-      ) as MassiveComponent | undefined;
+      );
+
+      const massiveComponent = massiveComponents[0];
 
       const mass = massiveComponent?.mass ?? 0;
 

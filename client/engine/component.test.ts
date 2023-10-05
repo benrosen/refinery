@@ -15,6 +15,10 @@ class TestComponent<
   }
 }
 
+afterEach(() => {
+  TestComponent.getAll().forEach((component) => component.delete());
+});
+
 describe("The Component class", () => {
   describe("constructor", () => {
     it("should create a component with the provided property values", () => {
@@ -87,6 +91,36 @@ describe("The Component class", () => {
         const testId = createUuid();
 
         expect(TestComponent.get(testId)).toBe(undefined);
+      });
+    });
+
+    describe("getAll method", () => {
+      it("should return all components", () => {
+        expect(TestComponent.getAll()).toEqual([]);
+
+        const testComponent1 = new TestComponent(
+          createUuid(),
+          createUuid(),
+          createUuid(),
+        );
+
+        const testComponent2 = new TestComponent(
+          createUuid(),
+          createUuid(),
+          createUuid(),
+        );
+
+        const testComponent3 = new TestComponent(
+          createUuid(),
+          createUuid(),
+          createUuid(),
+        );
+
+        expect(TestComponent.getAll()).toEqual([
+          testComponent1,
+          testComponent2,
+          testComponent3,
+        ]);
       });
     });
 
@@ -197,10 +231,14 @@ describe("The Component class", () => {
     });
 
     describe("getByEntityIdByType method", () => {
-      it("should return the component with the provided entityId and type", () => {
+      it("should return the components with the provided entityId and type", () => {
         const testType = createUuid();
 
         const testEntityId = createUuid();
+
+        expect(
+          TestComponent.getByEntityIdByType(testEntityId, testType),
+        ).toHaveLength(0);
 
         const testComponent1 = new TestComponent(
           testType,
@@ -209,19 +247,24 @@ describe("The Component class", () => {
           createUuid(),
         );
 
-        expect(TestComponent.getByEntityIdByType(testEntityId, testType)).toBe(
-          testComponent1,
+        const componentsByEntityIdByType = TestComponent.getByEntityIdByType(
+          testEntityId,
+          testType,
         );
+
+        expect(componentsByEntityIdByType).toHaveLength(1);
+
+        expect(componentsByEntityIdByType[0]).toBe(testComponent1);
       });
 
-      it("should return undefined if no component with the provided entityId and type exists", () => {
+      it("should return an empty array if no component with the provided entityId and type exists", () => {
         const testType = createUuid();
 
         const testEntityId = createUuid();
 
-        expect(TestComponent.getByEntityIdByType(testEntityId, testType)).toBe(
-          undefined,
-        );
+        expect(
+          TestComponent.getByEntityIdByType(testEntityId, testType),
+        ).toHaveLength(0);
       });
     });
 
@@ -386,39 +429,16 @@ describe("The Component class", () => {
           createUuid(),
         );
 
-        expect(
-          TestComponent.getByEntityIdByType(testEntityId1, testType1),
-        ).toBe(testComponent1);
+        const componentsByEntityIdByType = TestComponent.getByEntityIdByType(
+          testEntityId1,
+          testType1,
+        );
 
-        expect(
-          TestComponent.getByEntityIdByType(testEntityId2, testType1),
-        ).toBe(testComponent2);
+        expect(componentsByEntityIdByType).toHaveLength(1);
 
-        expect(
-          TestComponent.getByEntityIdByType(testEntityId1, testType2),
-        ).toBe(testComponent3);
+        expect(componentsByEntityIdByType[0].entityId).toBe(testEntityId1);
 
-        expect(
-          TestComponent.getByEntityIdByType(testEntityId2, testType2),
-        ).toBe(testComponent4);
-
-        TestComponent.deleteByEntityIdAndType(testEntityId1, testType1);
-
-        expect(
-          TestComponent.getByEntityIdByType(testEntityId1, testType1),
-        ).toBe(undefined);
-
-        expect(
-          TestComponent.getByEntityIdByType(testEntityId2, testType1),
-        ).toBe(testComponent2);
-
-        expect(
-          TestComponent.getByEntityIdByType(testEntityId1, testType2),
-        ).toBe(testComponent3);
-
-        expect(
-          TestComponent.getByEntityIdByType(testEntityId2, testType2),
-        ).toBe(testComponent4);
+        expect(componentsByEntityIdByType[0].type).toBe(testType1);
       });
     });
   });
