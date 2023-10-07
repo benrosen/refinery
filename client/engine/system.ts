@@ -37,20 +37,6 @@ export class System<T extends JsonValue = JsonValue> {
     return System.systems.filter((system) => system.type === type);
   };
 
-  public static readonly create = <T extends JsonValue>(
-    type: string,
-    onUpdate?: (components: Component<T>[]) => Promise<void>,
-    onComponentsAdded?: (components: Component<T>[]) => void,
-    onComponentsRemoved?: (components: Component<T>[]) => void,
-  ): System<T> => {
-    return new System<T>(
-      type,
-      onUpdate,
-      onComponentsAdded,
-      onComponentsRemoved,
-    );
-  };
-
   public static readonly delete = (id: string): void => {
     const index = System.systems.findIndex((system) => system.id === id);
 
